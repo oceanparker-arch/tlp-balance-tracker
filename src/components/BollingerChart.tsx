@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import {
   ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  ReferenceLine, Scatter,
+  ReferenceLine,
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import type { BollingerPoint } from "@/data/bollinger";
@@ -13,39 +13,58 @@ interface Props {
   showWdAxis?: boolean;
 }
 
-export function BollingerChart({ data, height = 320, showWdAxis = false }: Props) {
-  const monthMarks = useMemo(() => {
-    if (showWdAxis) return [];
-    const marks: { date: string; label: string }[] = [];
-    let lastMonth = "";
-    for (const d of data) {
-      const m = d.date.slice(0, 7);
-      if (m !== lastMonth) {
-        marks.push({ date: d.date, label: format(parseISO(d.date), "MMM") });
-        lastMonth = m;
-      }
-    }
-    return marks;
-  }, [data, showWdAxis]);
+interface ChartPoint extends BollingerPoint {
+  band: [number, number]; // [lower, upper] — Recharts renders Area as a range
+}
 
-  const breakouts = data.filter((d) => d.breakout);
+export function BollingerChart({ data, height = 320, showWdAxis = false }: Props) {
+  const chartData: ChartPoint[] = useMemo(
+    () => data.map((d) => ({ ...d, band: [d.lower, d.upper] as [number, number] })),
+    [data],
+  );
+
+  // Month metadata: first date (for separator line) and centre date (for label tick).
+  const monthMeta = useMemo(() => {
+    if (showWdAxis) return { starts: [] as string[], centres: new Map<string, string>() };
+    const groups = new Map<string, string[]>();
+    for (const d of data) {
+      const k = d.date.slice(0, 7);
+      const arr = groups.get(k) ?? [];
+      arr.push(d.date);
+      groups.set(k, arr);
+    }
+    const starts: string[] = [];
+    const centres = new Map<string, string>(); // date -> label
+    for (const [, dates] of groups) {
+      starts.push(dates[0]);
+      const mid = dates[Math.floor(dates.length / 2)];
+      centres.set(mid, format(parseISO(mid), "MMM"));
+    }
+    return { starts, centres };
+  }, [data, showWdAxis]);
 
   return (
     <div style={{ width: "100%", height }}>
       <ResponsiveContainer>
-        <ComposedChart data={data} margin={{ top: 24, right: 16, left: 8, bottom: 8 }}>
-          <defs>
-            <linearGradient id="bbFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#1F4E79" stopOpacity={0.2} />
-              <stop offset="100%" stopColor="#1F4E79" stopOpacity={0.2} />
-            </linearGradient>
-          </defs>
+        <ComposedChart data={chartData} margin={{ top: 16, right: 16, left: 8, bottom: 8 }}>
           <XAxis
             dataKey={showWdAxis ? "wd" : "date"}
-            tick={showWdAxis ? { fill: "#718096", fontSize: 11 } : false}
+            tick={
+              showWdAxis
+                ? { fill: "#718096", fontSize: 11 }
+                : ({ x, y, payload }: { x: number; y: number; payload: { value: string } }) => {
+                    const label = monthMeta.centres.get(payload.value);
+                    if (!label) return <g />;
+                    return (
+                      <text x={x} y={y + 14} textAnchor="middle" fill="#A0AEC0" fontSize={11}>
+                        {label}
+                      </text>
+                    );
+                  }
+            }
             tickLine={false}
             axisLine={{ stroke: "#E2E8F0" }}
-            interval="preserveStartEnd"
+            interval={0}
           />
           <YAxis
             tickFormatter={(v) => formatGBP(v, { compact: true })}
@@ -69,31 +88,22 @@ export function BollingerChart({ data, height = 320, showWdAxis = false }: Props
               );
             }}
           />
+
+          {/* Band fill between lower and upper — single Area rendered as a range. */}
           <Area
             type="monotone"
-            dataKey="upper"
+            dataKey="band"
             stroke="none"
-            fill="url(#bbFill)"
+            fill="#1F4E79"
+            fillOpacity={0.18}
             activeDot={false}
             isAnimationActive={false}
           />
-          <Area
-            type="monotone"
-            dataKey="lower"
-            stroke="none"
-            fill="#F8F9FA"
-            activeDot={false}
-            isAnimationActive={false}
-          />
-          {!showWdAxis && monthMarks.map((m) => (
-            <ReferenceLine
-              key={m.date}
-              x={m.date}
-              stroke="#CBD5E0"
-              strokeDasharray="3 4"
-              label={{ value: m.label, position: "insideTopLeft", fill: "#718096", fontSize: 11, dy: -18 }}
-            />
+
+          {!showWdAxis && monthMeta.starts.map((d) => (
+            <ReferenceLine key={d} x={d} stroke="#CBD5E0" strokeDasharray="3 4" />
           ))}
+
           <Line
             type="monotone"
             dataKey="trend"
@@ -108,10 +118,26 @@ export function BollingerChart({ data, height = 320, showWdAxis = false }: Props
             dataKey="balance"
             stroke="#1F4E79"
             strokeWidth={2}
-            dot={false}
             isAnimationActive={false}
+            dot={(props: { cx?: number; cy?: number; payload?: BollingerPoint; index?: number }) => {
+              const { cx, cy, payload, index } = props;
+              if (cx == null || cy == null || !payload || !payload.breakout) {
+                return <g key={`d-${index ?? 0}`} />;
+              }
+              return (
+                <circle
+                  key={`b-${index ?? 0}`}
+                  cx={cx}
+                  cy={cy}
+                  r={4}
+                  fill="#E74C3C"
+                  stroke="#fff"
+                  strokeWidth={1.5}
+                />
+              );
+            }}
+            activeDot={{ r: 5, fill: "#1F4E79", stroke: "#fff", strokeWidth: 1.5 }}
           />
-          <Scatter data={breakouts} dataKey="balance" fill="#E74C3C" shape="circle" isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>
     </div>
