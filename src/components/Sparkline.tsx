@@ -2,7 +2,8 @@ import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
 import type { DataPoint } from "@/data/mockData";
 
 export function Sparkline({ data, color = "#2E7D8A", height = 60 }: { data: DataPoint[]; color?: string; height?: number }) {
-  const slice = data.slice(-30);
+  // Show full 12 months
+  const slice = data.slice(-365);
   return (
     <div style={{ width: "100%", height }}>
       <ResponsiveContainer>
