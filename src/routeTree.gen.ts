@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PlatformPlatformIdRouteImport } from './routes/platform.$platformId'
 import { Route as AgentPlatformIdAgentIdRouteImport } from './routes/agent.$platformId.$agentId'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -31,36 +37,60 @@ const AgentPlatformIdAgentIdRoute = AgentPlatformIdAgentIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/platform/$platformId': typeof PlatformPlatformIdRoute
   '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/platform/$platformId': typeof PlatformPlatformIdRoute
   '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/platform/$platformId': typeof PlatformPlatformIdRoute
   '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/platform/$platformId' | '/agent/$platformId/$agentId'
+  fullPaths:
+    | '/'
+    | '/sitemap.xml'
+    | '/platform/$platformId'
+    | '/agent/$platformId/$agentId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/platform/$platformId' | '/agent/$platformId/$agentId'
-  id: '__root__' | '/' | '/platform/$platformId' | '/agent/$platformId/$agentId'
+  to:
+    | '/'
+    | '/sitemap.xml'
+    | '/platform/$platformId'
+    | '/agent/$platformId/$agentId'
+  id:
+    | '__root__'
+    | '/'
+    | '/sitemap.xml'
+    | '/platform/$platformId'
+    | '/agent/$platformId/$agentId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   PlatformPlatformIdRoute: typeof PlatformPlatformIdRoute
   AgentPlatformIdAgentIdRoute: typeof AgentPlatformIdAgentIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -87,6 +117,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   PlatformPlatformIdRoute: PlatformPlatformIdRoute,
   AgentPlatformIdAgentIdRoute: AgentPlatformIdAgentIdRoute,
 }
