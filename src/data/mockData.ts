@@ -59,15 +59,19 @@ export interface DataPoint {
 }
 
 // Generate working-day series for 12 months ending today.
+// Pattern per month:
+//   - WD1-3: sharp rental-income spike (£40k–£120k * scale)
+//   - WD4 .. last-5: sharp decay to £2k–£15k * scale
+//   - Final 5 working days: slight build back to £10k–£30k * scale
+//   - ±20% noise per point
 function generateAgentSeries(agentId: string): DataPoint[] {
   const rand = seeded(hashString(agentId));
-  // Each agent gets a base balance scale £5k–£80k typical mid-month.
-  const baseScale = 5000 + rand() * 75000;
+  // Per-agent scale multiplier so agents differ in size (0.5x – 1.6x).
+  const scale = 0.5 + rand() * 1.1;
 
   const today = startOfDay(new Date());
   const start = subDays(today, 365);
 
-  // First pass: bucket working days by month.
   const monthGroups = new Map<string, Date[]>();
   for (let d = start; d <= today; d = addDays(d, 1)) {
     if (!isWorkingDay(d)) continue;
@@ -77,25 +81,36 @@ function generateAgentSeries(agentId: string): DataPoint[] {
     monthGroups.set(key, arr);
   }
 
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
   const points: DataPoint[] = [];
   for (const [, days] of monthGroups) {
     const wdMax = days.length;
+    const lateStart = wdMax - 5; // last 5 working days
     days.forEach((d, idx) => {
       const wd = idx + 1;
-      const pct = wd / wdMax;
       let base: number;
       if (wd <= 3) {
-        // start-of-month rental spike
-        base = baseScale * (1.5 + rand() * 1.2);
-      } else if (pct < 0.75) {
-        // mid-month decay
-        base = baseScale * (1.0 - pct * 0.85) * (0.4 + rand() * 0.6);
+        // Spike: WD1 highest, WD2 slightly lower, WD3 lower still.
+        const spikeProfile = wd === 1 ? 1.0 : wd === 2 ? 0.85 : 0.65;
+        base = lerp(40000, 120000, rand()) * spikeProfile;
+      } else if (wd <= lateStart) {
+        // Sharp decay from WD4 down to mid-month low.
+        const span = Math.max(1, lateStart - 3);
+        const t = (wd - 4) / span; // 0..1 across the decay region
+        // Exponential-ish decay: from ~25k down to 2k–15k floor.
+        const startVal = lerp(20000, 35000, rand());
+        const endVal = lerp(2000, 15000, rand());
+        base = startVal * Math.pow(endVal / startVal, t);
       } else {
-        // late month slight build
-        base = baseScale * (0.3 + (pct - 0.75) * 1.4) * (0.6 + rand() * 0.4);
+        // Late-month slight build back up.
+        const t = (wd - lateStart) / 5; // 0..1
+        const lowVal = lerp(2000, 15000, rand());
+        const peakVal = lerp(10000, 30000, rand());
+        base = lerp(lowVal, peakVal, t);
       }
-      const noise = 1 + (rand() - 0.5) * 0.3; // ±15%
-      const balance = Math.max(500, base * noise);
+      const noise = 1 + (rand() - 0.5) * 0.4; // ±20%
+      const balance = Math.max(500, base * scale * noise);
       points.push({
         date: format(d, "yyyy-MM-dd"),
         ts: d.getTime(),
