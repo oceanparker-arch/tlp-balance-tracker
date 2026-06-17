@@ -10,10 +10,7 @@ import { trendPercentChange } from "@/data/bollinger";
 
 export const Route = createFileRoute("/agent/$platformId/$agentId")({
   head: () => ({
-    meta: [
-      { title: "Agent Detail · TLP Monitor" },
-      { name: "description", content: "Per-agent Bollinger band closing balance analysis." },
-    ],
+    meta: [{ title: "Agent Detail · TLP Monitor" }],
   }),
   component: AgentPage,
 });
@@ -70,36 +67,36 @@ function AgentPage() {
               <p className="text-sm text-text-secondary">{agent.platformName}</p>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <StatCard label="Today's closing balance" value={formatGBP(agent.latest.balance)} />
               <StatCard label="Band status" value={<StatusPill status={agent.status} />} sub={`Mean ${formatGBP(agent.latest.mean)}`} />
               <StatCard
                 label="90-day trend"
-                value={<TrendArrow trend={agent.trend} label="90d" />}
-                sub={`${pct >= 0 ? "+" : ""}${pct.toFixed(1)}% over 90 days`}
+                value={<TrendArrow trend={agent.trend} pct={pct} />}
+                sub="Rolling 90-day average"
               />
             </div>
 
             <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
               <div className="mb-3 flex items-start justify-between">
-                <div>
-                  <h2 className="text-base font-semibold text-text-primary">Closing Balance — Rolling 12 Months</h2>
-                </div>
-                <div className="inline-flex overflow-hidden rounded-md border border-border text-xs">
-                  <button
-                    onClick={() => setView("all")}
-                    className={`px-3 py-1.5 ${view === "all" ? "text-white" : "text-text-secondary"}`}
-                    style={{ background: view === "all" ? "var(--navy)" : "white" }}
-                  >
-                    All history
-                  </button>
-                  <button
-                    onClick={() => setView("month")}
-                    className={`border-l border-border px-3 py-1.5 ${view === "month" ? "text-white" : "text-text-secondary"}`}
-                    style={{ background: view === "month" ? "var(--navy)" : "white" }}
-                  >
-                    This month
-                  </button>
+                <h2 className="text-base font-semibold text-text-primary">Closing Balance — Rolling 12 Months</h2>
+                <div className="flex items-center gap-3">
+                  <div className="inline-flex overflow-hidden rounded-md border border-border text-xs">
+                    <button
+                      onClick={() => setView("all")}
+                      className={`px-3 py-1.5 ${view === "all" ? "text-white" : "text-text-secondary"}`}
+                      style={{ background: view === "all" ? "var(--navy)" : "white" }}
+                    >
+                      All history
+                    </button>
+                    <button
+                      onClick={() => setView("month")}
+                      className={`border-l border-border px-3 py-1.5 ${view === "month" ? "text-white" : "text-text-secondary"}`}
+                      style={{ background: view === "month" ? "var(--navy)" : "white" }}
+                    >
+                      This month
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="mb-3"><ChartLegend /></div>
@@ -107,6 +104,7 @@ function AgentPage() {
                 data={view === "all" ? agent.series : monthSeries}
                 height={360}
                 showWdAxis={view === "month"}
+                agentName={agent.agentName}
               />
             </section>
 
@@ -120,13 +118,19 @@ function AgentPage() {
               </button>
               {showRaw && (
                 <div className="max-h-[420px] overflow-auto border-t border-border">
-                  <table className="w-full text-sm">
+                  <table className="w-full table-fixed text-sm">
+                    <colgroup>
+                      <col className="w-[22%]" />
+                      <col className="w-[26%]" />
+                      <col className="w-[22%]" />
+                      <col className="w-[30%]" />
+                    </colgroup>
                     <thead className="sticky top-0 bg-secondary text-left text-xs uppercase tracking-wide text-text-secondary">
                       <tr>
-                        <th className="px-5 py-2">Date</th>
-                        <th className="px-5 py-2 text-right">Closing balance</th>
-                        <th className="px-5 py-2">Band status</th>
-                        <th className="px-5 py-2 text-right">Variance from mean</th>
+                        <th className="px-5 py-2.5">Date</th>
+                        <th className="px-5 py-2.5 text-right">Closing balance</th>
+                        <th className="px-5 py-2.5">Band status</th>
+                        <th className="px-5 py-2.5 text-right">Variance from mean</th>
                       </tr>
                     </thead>
                     <tbody>

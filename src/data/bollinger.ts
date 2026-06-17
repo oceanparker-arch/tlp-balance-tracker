@@ -8,7 +8,6 @@ export interface BollingerPoint extends DataPoint {
   breakout: "above" | "below" | null;
 }
 
-// Group by working day of month, compute mean / std-dev per WD.
 export function bollingerStats(data: DataPoint[]) {
   const groups = new Map<number, number[]>();
   for (const d of data) {
@@ -31,17 +30,15 @@ export function bollingerStats(data: DataPoint[]) {
   return stats;
 }
 
-// Linear regression slope across the last `windowDays` data points.
-export function trendlineSlope(data: DataPoint[], windowDays = 90) {
+// Linear regression over full 12-month window for the trendline drawn on chart.
+export function trendlineSlope(data: DataPoint[], windowDays = 365) {
   const slice = data.slice(-windowDays);
   if (slice.length < 2) return { slope: 0, intercept: slice[0]?.balance ?? 0, startIndex: data.length - slice.length };
   const n = slice.length;
   let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
   for (let i = 0; i < n; i++) {
-    sumX += i;
-    sumY += slice[i].balance;
-    sumXY += i * slice[i].balance;
-    sumXX += i * i;
+    sumX += i; sumY += slice[i].balance;
+    sumXY += i * slice[i].balance; sumXX += i * i;
   }
   const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX || 1);
   const intercept = (sumY - slope * sumX) / n;
@@ -50,7 +47,8 @@ export function trendlineSlope(data: DataPoint[], windowDays = 90) {
 
 export function computeBollinger(data: DataPoint[]): BollingerPoint[] {
   const stats = bollingerStats(data);
-  const { slope, intercept, startIndex } = trendlineSlope(data, 90);
+  // Trendline drawn across full 12 months
+  const { slope, intercept, startIndex } = trendlineSlope(data, 365);
   return data.map((d, i) => {
     const s = stats.get(d.wd);
     const mean = s?.mean ?? d.balance;
@@ -66,15 +64,26 @@ export function computeBollinger(data: DataPoint[]): BollingerPoint[] {
 }
 
 export type TrendDirection = "up" | "down" | "flat";
+
+// Direction reported on 90-day rolling window
 export function trendDirection(data: DataPoint[]): TrendDirection {
-  const { slope } = trendlineSlope(data, 90);
-  const avg = data.slice(-90).reduce((s, d) => s + d.balance, 0) / Math.max(1, Math.min(90, data.length));
+  const slice = data.slice(-90);
+  if (slice.length < 2) return "flat";
+  const n = slice.length;
+  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+  for (let i = 0; i < n; i++) {
+    sumX += i; sumY += slice[i].balance;
+    sumXY += i * slice[i].balance; sumXX += i * i;
+  }
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX || 1);
+  const avg = sumY / n;
   const rel = avg ? (slope * 90) / avg : 0;
   if (rel > 0.05) return "up";
   if (rel < -0.05) return "down";
   return "flat";
 }
 
+// 90-day % change for reporting
 export function trendPercentChange(data: DataPoint[], windowDays = 90) {
   const slice = data.slice(-windowDays);
   if (slice.length < 2) return 0;

@@ -2,8 +2,8 @@ type Status = "within" | "above" | "below";
 
 const map: Record<Status, { label: string; bg: string; fg: string }> = {
   within: { label: "Within band", bg: "rgba(46,125,138,0.12)", fg: "#2E7D8A" },
-  above: { label: "Above upper", bg: "rgba(200,119,58,0.14)", fg: "#C8773A" },
-  below: { label: "Below lower", bg: "rgba(231,76,60,0.12)", fg: "#E74C3C" },
+  above:  { label: "Above upper", bg: "rgba(200,119,58,0.14)",  fg: "#C8773A" },
+  below:  { label: "Below lower", bg: "rgba(231,76,60,0.12)",   fg: "#E74C3C" },
 };
 
 export function StatusPill({ status }: { status: Status }) {
@@ -18,10 +18,21 @@ export function StatusPill({ status }: { status: Status }) {
   );
 }
 
-export function TrendArrow({ trend, label }: { trend: "up" | "down" | "flat"; label?: string }) {
+export function TrendArrow({
+  trend,
+  pct,
+  label,
+}: {
+  trend: "up" | "down" | "flat";
+  pct?: number;
+  label?: string;
+}) {
+  const pctStr = pct != null ? ` ${Math.abs(pct).toFixed(1)}%` : "";
   const suffix = label ? ` (${label})` : "";
-  if (trend === "up") return <span style={{ color: "#27AE60" }}>↗ Up{suffix}</span>;
-  if (trend === "down") return <span style={{ color: "#E74C3C" }}>↘ Down{suffix}</span>;
+  if (trend === "up")
+    return <span style={{ color: "#27AE60" }}>↗ Up{pctStr}{suffix}</span>;
+  if (trend === "down")
+    return <span style={{ color: "#E74C3C" }}>↘ Down{pctStr}{suffix}</span>;
   return <span style={{ color: "#718096" }}>→ Flat{suffix}</span>;
 }
 

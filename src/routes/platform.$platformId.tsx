@@ -5,15 +5,12 @@ import { TopNav } from "@/components/TopNav";
 import { BollingerChart, ChartLegend } from "@/components/BollingerChart";
 import { Sparkline } from "@/components/Sparkline";
 import { StatusPill, TrendArrow } from "@/components/StatusPill";
-import { LiveBadge } from "@/components/LiveBadge";
 import { formatGBP } from "@/lib/format";
+import { trendPercentChange } from "@/data/bollinger";
 
 export const Route = createFileRoute("/platform/$platformId")({
   head: () => ({
-    meta: [
-      { title: "Platform Overview · TLP Monitor" },
-      { name: "description", content: "Platform-level Bollinger band analysis of client account balances." },
-    ],
+    meta: [{ title: "Platform Overview · TLP Monitor" }],
   }),
   component: PlatformPage,
 });
@@ -35,9 +32,7 @@ function PlatformPage() {
     <div className="min-h-screen bg-surface">
       <TopNav lastUpdated={data.lastUpdated} />
       <main className="mx-auto max-w-[1400px] space-y-6 px-6 py-6">
-        <div>
-          <Link to="/" className="text-sm font-medium hover:underline" style={{ color: "var(--teal)" }}>← Dashboard</Link>
-        </div>
+        <Link to="/" className="text-sm font-medium hover:underline" style={{ color: "var(--teal)" }}>← Dashboard</Link>
 
         {!platform ? (
           <div className="rounded-lg border border-border bg-card p-8 text-center text-text-secondary">
@@ -52,44 +47,44 @@ function PlatformPage() {
 
             <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
               <div className="mb-3 flex items-start justify-between">
-                <div>
-                  <h2 className="text-base font-semibold text-text-primary">{platform.name} Combined Balance — Rolling 12 Months</h2>
-                </div>
+                <h2 className="text-base font-semibold text-text-primary">{platform.name} Combined Balance — Rolling 12 Months</h2>
                 <div className="flex items-center gap-3">
                   <StatusPill status={platform.status} />
-                  <TrendArrow trend={platform.trend} label="90d" />
+                  <TrendArrow trend={platform.trend} pct={trendPercentChange(platform.raw, 90)} label="90d" />
                 </div>
               </div>
               <div className="mb-3"><ChartLegend /></div>
-              <BollingerChart data={platform.series} height={280} />
+              <BollingerChart data={platform.series} height={280} agentName={platform.name} />
             </section>
 
             <section className="rounded-lg border border-border bg-card shadow-sm">
               <div className="flex items-center justify-between border-b border-border px-5 py-3">
                 <h2 className="text-base font-semibold text-text-primary">Agents</h2>
-                <button
-                  onClick={() => setSortDesc((d) => !d)}
-                  className="text-xs font-medium hover:underline"
-                  style={{ color: "var(--teal)" }}
-                >
+                <button onClick={() => setSortDesc((d) => !d)} className="text-xs font-medium hover:underline" style={{ color: "var(--teal)" }}>
                   Sort by balance {sortDesc ? "↓" : "↑"}
                 </button>
               </div>
-              <table className="w-full text-sm">
+              <table className="w-full table-fixed text-sm">
+                <colgroup>
+                  <col className="w-[28%]" />
+                  <col className="w-[22%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[30%]" />
+                </colgroup>
                 <thead className="bg-secondary text-left text-xs uppercase tracking-wide text-text-secondary">
                   <tr>
-                    <th className="px-5 py-2">Agent</th>
-                    <th className="px-5 py-2 text-right">Closing balance</th>
-                    <th className="px-5 py-2">Band status</th>
-                    <th className="px-5 py-2">90-day trend</th>
-                    <th className="px-5 py-2 w-[140px]">12-month history</th>
+                    <th className="px-5 py-2.5">Agent</th>
+                    <th className="px-5 py-2.5 text-right">Closing balance</th>
+                    <th className="px-5 py-2.5">Band status</th>
+                    <th className="px-5 py-2.5">90-day trend · 12M history</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedAgents.map((a) => (
-                    <tr key={a.agentId} className="border-t border-border">
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2">
+                  {sortedAgents.map((a) => {
+                    const pct = trendPercentChange(a.raw, 90);
+                    return (
+                      <tr key={a.agentId} className="border-t border-border">
+                        <td className="px-5 py-3">
                           <Link
                             to="/agent/$platformId/$agentId"
                             params={{ platformId: a.platformId, agentId: a.agentId }}
@@ -98,15 +93,18 @@ function PlatformPage() {
                           >
                             {a.agentName}
                           </Link>
-                          {a.isLive && <LiveBadge />}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
-                      <td className="px-5 py-3"><StatusPill status={a.status} /></td>
-                      <td className="px-5 py-3"><TrendArrow trend={a.trend} label="90d" /></td>
-                      <td className="px-5 py-3"><div style={{ width: 120 }}><Sparkline data={a.raw} height={40} /></div></td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-5 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
+                        <td className="px-5 py-3"><StatusPill status={a.status} /></td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-3">
+                            <TrendArrow trend={a.trend} pct={pct} label="90d" />
+                            <div style={{ width: 100 }}><Sparkline data={a.raw} height={36} /></div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </section>
