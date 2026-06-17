@@ -67,20 +67,17 @@ function AgentPage() {
           <>
             <div>
               <h1 className="text-2xl font-bold text-text-primary">{agent.agentName}</h1>
-              <p className="text-sm text-text-secondary">
-                {agent.platformName} · Last updated {format(parseISO(agent.latest.date), "dd MMM yyyy")}
-              </p>
+              <p className="text-sm text-text-secondary">{agent.platformName}</p>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <StatCard label="Today's closing balance" value={formatGBP(agent.latest.balance)} />
               <StatCard label="Band status" value={<StatusPill status={agent.status} />} sub={`Mean ${formatGBP(agent.latest.mean)}`} />
               <StatCard
-                label="3-month trend"
-                value={<TrendArrow trend={agent.trend} />}
+                label="90-day trend"
+                value={<TrendArrow trend={agent.trend} label="90d" />}
                 sub={`${pct >= 0 ? "+" : ""}${pct.toFixed(1)}% over 90 days`}
               />
-              <StatCard label="Working day position" value={`WD ${agent.latest.wd} of ${agent.latest.wdMax}`} />
             </div>
 
             <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
@@ -127,7 +124,6 @@ function AgentPage() {
                     <thead className="sticky top-0 bg-secondary text-left text-xs uppercase tracking-wide text-text-secondary">
                       <tr>
                         <th className="px-5 py-2">Date</th>
-                        <th className="px-5 py-2">WD</th>
                         <th className="px-5 py-2 text-right">Closing balance</th>
                         <th className="px-5 py-2">Band status</th>
                         <th className="px-5 py-2 text-right">Variance from mean</th>
@@ -140,7 +136,6 @@ function AgentPage() {
                         return (
                           <tr key={p.date} className="border-t border-border">
                             <td className="px-5 py-2">{format(parseISO(p.date), "dd MMM yyyy")}</td>
-                            <td className="px-5 py-2 text-text-secondary">{p.wd}</td>
                             <td className="px-5 py-2 text-right tabular-nums">{formatGBP(p.balance)}</td>
                             <td className="px-5 py-2"><StatusPill status={status as "within" | "above" | "below"} /></td>
                             <td className="px-5 py-2 text-right tabular-nums" style={{ color: variance >= 0 ? "#27AE60" : "#E74C3C" }}>
