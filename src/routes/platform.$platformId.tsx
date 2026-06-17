@@ -5,6 +5,7 @@ import { TopNav } from "@/components/TopNav";
 import { BollingerChart, ChartLegend } from "@/components/BollingerChart";
 import { Sparkline } from "@/components/Sparkline";
 import { StatusPill, TrendArrow } from "@/components/StatusPill";
+import { LiveBadge } from "@/components/LiveBadge";
 import { formatGBP } from "@/lib/format";
 
 export const Route = createFileRoute("/platform/$platformId")({
