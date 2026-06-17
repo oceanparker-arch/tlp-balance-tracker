@@ -18,10 +18,11 @@ export function StatusPill({ status }: { status: Status }) {
   );
 }
 
-export function TrendArrow({ trend }: { trend: "up" | "down" | "flat" }) {
-  if (trend === "up") return <span style={{ color: "#27AE60" }}>↗ Up</span>;
-  if (trend === "down") return <span style={{ color: "#E74C3C" }}>↘ Down</span>;
-  return <span style={{ color: "#718096" }}>→ Flat</span>;
+export function TrendArrow({ trend, label }: { trend: "up" | "down" | "flat"; label?: string }) {
+  const suffix = label ? ` (${label})` : "";
+  if (trend === "up") return <span style={{ color: "#27AE60" }}>↗ Up{suffix}</span>;
+  if (trend === "down") return <span style={{ color: "#E74C3C" }}>↘ Down{suffix}</span>;
+  return <span style={{ color: "#718096" }}>→ Flat{suffix}</span>;
 }
 
 export function PlatformBadge({ name }: { name: string }) {
