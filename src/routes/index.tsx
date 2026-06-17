@@ -80,14 +80,17 @@ function Dashboard() {
                       style={{ borderLeft: "3px solid var(--tlp-red)" }}
                     >
                       <td className="px-4 py-2.5">
-                        <Link
-                          to="/agent/$platformId/$agentId"
-                          params={{ platformId: a.platformId, agentId: a.agentId }}
-                          className="font-semibold hover:underline"
-                          style={{ color: "var(--teal)" }}
-                        >
-                          {a.agentName}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to="/agent/$platformId/$agentId"
+                            params={{ platformId: a.platformId, agentId: a.agentId }}
+                            className="font-semibold hover:underline"
+                            style={{ color: "var(--teal)" }}
+                          >
+                            {a.agentName}
+                          </Link>
+                          {a.isLive && <LiveBadge />}
+                        </div>
                       </td>
                       <td className="px-4 py-2.5"><PlatformBadge name={a.platformName} /></td>
                       <td className="px-4 py-2.5 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
