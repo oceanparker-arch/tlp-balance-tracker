@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useDashboardData } from "@/data/useDashboardData";
 import { TopNav } from "@/components/TopNav";
 import { BollingerChart } from "@/components/BollingerChart";
-import { Sparkline } from "@/components/Sparkline";
+
 import { PlatformBadge, StatusPill, TrendArrow } from "@/components/StatusPill";
 import { LiveBadge } from "@/components/LiveBadge";
 import { formatGBP } from "@/lib/format";
@@ -308,12 +308,6 @@ function Dashboard() {
                         {pBI.boundaryLabel}: {formatGBP(pBI.boundary)}
                       </div>
                     )}
-                    <div className="mt-3">
-                      <Sparkline
-                        data={p.raw}
-                        color={p.status === "within" ? "#2E7D8A" : p.status === "above" ? "#C8773A" : "#E74C3C"}
-                      />
-                    </div>
                   </Link>
                 );
               })}

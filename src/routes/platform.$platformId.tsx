@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useDashboardData } from "@/data/useDashboardData";
 import { TopNav } from "@/components/TopNav";
 import { BollingerChart, ChartLegend } from "@/components/BollingerChart";
-import { Sparkline } from "@/components/Sparkline";
+
 import { StatusPill, TrendArrow } from "@/components/StatusPill";
 import { formatGBP } from "@/lib/format";
 import { trendPercentChange, breakoutInfo } from "@/data/bollinger";
@@ -76,7 +76,7 @@ function PlatformPage() {
                     <th className="px-5 py-2.5">Agent</th>
                     <th className="px-5 py-2.5 text-right">Closing balance</th>
                     <th className="px-5 py-2.5">Band status</th>
-                    <th className="px-5 py-2.5">90-day trend · 12M history</th>
+                    <th className="px-5 py-2.5">90-day trend</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -97,10 +97,7 @@ function PlatformPage() {
                         <td className="px-5 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
                         <td className="px-5 py-3"><StatusPill status={a.status} pct={a.breakoutPct ?? undefined} /></td>
                         <td className="px-5 py-3">
-                          <div className="flex items-center gap-3">
-                            <TrendArrow trend={a.trend} pct={pct} label="90d" />
-                            <div style={{ width: 100 }}><Sparkline data={a.raw} height={36} /></div>
-                          </div>
+                          <TrendArrow trend={a.trend} pct={pct} label="90d" />
                         </td>
                       </tr>
                     );
