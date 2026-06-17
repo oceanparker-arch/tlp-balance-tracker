@@ -32,14 +32,10 @@ function Dashboard() {
 
         {/* Section 1: Master Bollinger Chart */}
         <section className="relative rounded-lg border border-border bg-card p-5 shadow-sm">
-          <div className="mb-4 flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-text-primary">TLP Aggregate Client Account Balance</h2>
-            </div>
-            <span className="rounded-full border border-border bg-secondary px-2.5 py-0.5 text-[11px] font-medium text-text-secondary">
-              Rolling 12 months
-            </span>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-text-primary">TLP Aggregate Client Account Balance</h2>
           </div>
+
           <div className="mb-3"><ChartLegend /></div>
           {data.loading ? <Skeleton className="h-[320px]" /> : <BollingerChart data={data.aggregate} height={320} />}
         </section>
