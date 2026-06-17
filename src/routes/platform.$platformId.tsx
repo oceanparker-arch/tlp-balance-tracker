@@ -76,7 +76,7 @@ function PlatformPage() {
                     <th className="px-5 py-2.5">Agent</th>
                     <th className="px-5 py-2.5 text-right">Closing balance</th>
                     <th className="px-5 py-2.5">Band status</th>
-                    <th className="px-5 py-2.5">90-day trend · 12M history</th>
+                    <th className="px-5 py-2.5">90-day trend</th>
                   </tr>
                 </thead>
                 <tbody>
