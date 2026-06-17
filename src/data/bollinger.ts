@@ -37,8 +37,9 @@ function rollingBollingerStats(
   const wd = data[pointIndex].wd;
 
   // Collect all historical values for this working day position
+  // Exclude zeros — blank/missing days should not distort the bands
   const vals = historicalData
-    .filter((d) => d.wd === wd)
+    .filter((d) => d.wd === wd && d.balance > 0)
     .map((d) => d.balance);
 
   if (vals.length < 2) {
@@ -62,6 +63,8 @@ function rollingBollingerStats(
 export function bollingerStats(data: DataPoint[]) {
   const groups = new Map<number, number[]>();
   for (const d of data) {
+    // Exclude zeros from band calculations
+    if (d.balance <= 0) continue;
     const arr = groups.get(d.wd) ?? [];
     arr.push(d.balance);
     groups.set(d.wd, arr);
@@ -108,8 +111,10 @@ export function computeBollinger(data: DataPoint[]): BollingerPoint[] {
     const trend = localIdx >= 0 ? intercept + slope * localIdx : NaN;
 
     let breakout: "above" | "below" | null = null;
-    if (d.balance > upper) breakout = "above";
-    else if (d.balance < lower) breakout = "below";
+    if (d.balance > 0) {
+      if (d.balance > upper) breakout = "above";
+      else if (d.balance < lower) breakout = "below";
+    }
 
     return { ...d, mean, upper, lower, trend, breakout };
   });
