@@ -36,10 +36,17 @@ function rollingBollingerStats(
   const historicalData = data.slice(0, lastIdxInMonth + 1);
   const wd = data[pointIndex].wd;
 
-  // Collect all historical values for this working day position
-  // Exclude zeros — blank/missing days should not distort the bands
+  // Collect WD values from the last 12 months of history only.
+  // Using all history distorts bands when business size has changed over time.
+  // 12 months = ~12 observations per WD position — enough for stable bands
+  // without being skewed by old data from when balances were much lower/higher.
+  const currentDate = new Date(data[pointIndex].date);
+  const twelveMonthsAgo = new Date(currentDate);
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+  const cutoff = twelveMonthsAgo.toISOString().slice(0, 10);
+
   const vals = historicalData
-    .filter((d) => d.wd === wd && d.balance > 0)
+    .filter((d) => d.wd === wd && d.balance > 0 && d.date >= cutoff)
     .map((d) => d.balance);
 
   if (vals.length < 2) {
