@@ -30,7 +30,7 @@ function PlatformPage() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <TopNav lastUpdated={data.lastUpdated} />
+      <TopNav lastUpdated={data.lastUpdated} usingLiveData={data.usingLiveData} />
       <main className="mx-auto max-w-[1400px] space-y-6 px-6 py-6">
         <Link to="/" className="text-sm font-medium hover:underline" style={{ color: "var(--teal)" }}>← Dashboard</Link>
 
