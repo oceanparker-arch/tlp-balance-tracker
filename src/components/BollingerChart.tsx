@@ -10,7 +10,7 @@ import { formatGBP } from "@/lib/format";
 interface Props {
   data: BollingerPoint[];
   height?: number;
-  showWdAxis?: boolean; // when true, x labels are WD numbers (single-month view)
+  showWdAxis?: boolean;
 }
 
 export function BollingerChart({ data, height = 320, showWdAxis = false }: Props) {
@@ -33,7 +33,7 @@ export function BollingerChart({ data, height = 320, showWdAxis = false }: Props
   return (
     <div style={{ width: "100%", height }}>
       <ResponsiveContainer>
-        <ComposedChart data={data} margin={{ top: 16, right: 16, left: 8, bottom: 8 }}>
+        <ComposedChart data={data} margin={{ top: 24, right: 16, left: 8, bottom: 8 }}>
           <defs>
             <linearGradient id="bbFill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#1F4E79" stopOpacity={0.2} />
@@ -64,12 +64,11 @@ export function BollingerChart({ data, height = 320, showWdAxis = false }: Props
                 <div className="rounded-md border border-border bg-white px-3 py-2 text-xs shadow-md">
                   <div className="font-medium text-text-primary">{format(parseISO(p.date), "EEE dd MMM yyyy")}</div>
                   <div className="mt-1 text-text-primary">{formatGBP(p.balance)}</div>
-                  <div className="mt-0.5" style={{ color }}>{status} · WD {p.wd}</div>
+                  <div className="mt-0.5" style={{ color }}>{status}</div>
                 </div>
               );
             }}
           />
-          {/* Band fill: render upper as area, then lower as area in background fill */}
           <Area
             type="monotone"
             dataKey="upper"
@@ -90,9 +89,9 @@ export function BollingerChart({ data, height = 320, showWdAxis = false }: Props
             <ReferenceLine
               key={m.date}
               x={m.date}
-              stroke="#E2E8F0"
-              strokeDasharray="2 3"
-              label={{ value: m.label, position: "insideTop", fill: "#A0AEC0", fontSize: 10, dy: -4 }}
+              stroke="#CBD5E0"
+              strokeDasharray="3 4"
+              label={{ value: m.label, position: "insideTopLeft", fill: "#718096", fontSize: 11, dy: -18 }}
             />
           ))}
           <Line
