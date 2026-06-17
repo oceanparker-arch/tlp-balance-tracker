@@ -1,6 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { format, parseISO } from "date-fns";
 import { useDashboardData } from "@/data/useDashboardData";
 import { TopNav } from "@/components/TopNav";
 import { BollingerChart, ChartLegend } from "@/components/BollingerChart";
@@ -57,7 +56,7 @@ function PlatformPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <StatusPill status={platform.status} />
-                  <TrendArrow trend={platform.trend} />
+                  <TrendArrow trend={platform.trend} label="90d" />
                 </div>
               </div>
               <div className="mb-3"><ChartLegend /></div>
@@ -81,9 +80,8 @@ function PlatformPage() {
                     <th className="px-5 py-2">Agent</th>
                     <th className="px-5 py-2 text-right">Closing balance</th>
                     <th className="px-5 py-2">Band status</th>
-                    <th className="px-5 py-2">30-day trend</th>
-                    <th className="px-5 py-2">Last updated</th>
-                    <th className="px-5 py-2 w-[140px]">Spark</th>
+                    <th className="px-5 py-2">90-day trend</th>
+                    <th className="px-5 py-2 w-[140px]">12-month history</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -101,8 +99,7 @@ function PlatformPage() {
                       </td>
                       <td className="px-5 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
                       <td className="px-5 py-3"><StatusPill status={a.status} /></td>
-                      <td className="px-5 py-3"><TrendArrow trend={a.trend} /></td>
-                      <td className="px-5 py-3 text-text-secondary">{format(parseISO(a.latest.date), "dd MMM yyyy")}</td>
+                      <td className="px-5 py-3"><TrendArrow trend={a.trend} label="90d" /></td>
                       <td className="px-5 py-3"><div style={{ width: 120 }}><Sparkline data={a.raw} height={40} /></div></td>
                     </tr>
                   ))}
