@@ -8,6 +8,57 @@ export interface BollingerPoint extends DataPoint {
   breakout: "above" | "below" | null;
 }
 
+// ── Rolling/expanding Bollinger stats ─────────────────────────────────────────
+// For each data point, bands are calculated using ONLY data available up to
+// and including that point's month. This makes the chart historically honest —
+// you see where the bands actually were at the time, not in hindsight.
+//
+// We use an expanding window: as more months accumulate, the bands narrow
+// and stabilise. A minimum of 2 months of history is required before bands
+// are meaningful; before that we show the balance as the band centre.
+
+function rollingBollingerStats(
+  data: DataPoint[],
+  pointIndex: number,
+): { mean: number; upper: number; lower: number } {
+  // Use all data up to and including the current point's month
+  const currentMonth = data[pointIndex].date.slice(0, 7);
+
+  // Find the index of the last point in the current month
+  let lastIdxInMonth = pointIndex;
+  while (
+    lastIdxInMonth + 1 < data.length &&
+    data[lastIdxInMonth + 1].date.slice(0, 7) === currentMonth
+  ) {
+    lastIdxInMonth++;
+  }
+
+  const historicalData = data.slice(0, lastIdxInMonth + 1);
+  const wd = data[pointIndex].wd;
+
+  // Collect all historical values for this working day position
+  const vals = historicalData
+    .filter((d) => d.wd === wd)
+    .map((d) => d.balance);
+
+  if (vals.length < 2) {
+    // Not enough history — use the single value as centre, no band
+    const v = vals[0] ?? data[pointIndex].balance;
+    return { mean: v, upper: v, lower: v };
+  }
+
+  const mean = vals.reduce((s, v) => s + v, 0) / vals.length;
+  const variance = vals.reduce((s, v) => s + (v - mean) ** 2, 0) / (vals.length - 1);
+  const std = Math.sqrt(variance);
+
+  return {
+    mean,
+    upper: mean + 2 * std,
+    lower: Math.max(0, mean - 2 * std),
+  };
+}
+
+// ── Static stats (used for summary metrics only, not chart bands) ─────────────
 export function bollingerStats(data: DataPoint[]) {
   const groups = new Map<number, number[]>();
   for (const d of data) {
@@ -18,7 +69,7 @@ export function bollingerStats(data: DataPoint[]) {
   const stats = new Map<number, { mean: number; std: number; upper: number; lower: number }>();
   for (const [wd, vals] of groups) {
     const mean = vals.reduce((s, v) => s + v, 0) / vals.length;
-    const variance = vals.reduce((s, v) => s + (v - mean) ** 2, 0) / Math.max(1, vals.length);
+    const variance = vals.reduce((s, v) => s + (v - mean) ** 2, 0) / Math.max(1, vals.length - 1);
     const std = Math.sqrt(variance);
     stats.set(wd, {
       mean,
@@ -30,7 +81,7 @@ export function bollingerStats(data: DataPoint[]) {
   return stats;
 }
 
-// Linear regression over full 12-month window for the trendline drawn on chart.
+// ── Trendline ─────────────────────────────────────────────────────────────────
 export function trendlineSlope(data: DataPoint[], windowDays = 365) {
   const slice = data.slice(-windowDays);
   if (slice.length < 2) return { slope: 0, intercept: slice[0]?.balance ?? 0, startIndex: data.length - slice.length };
@@ -45,27 +96,27 @@ export function trendlineSlope(data: DataPoint[], windowDays = 365) {
   return { slope, intercept, startIndex: data.length - slice.length };
 }
 
+// ── Main compute function ─────────────────────────────────────────────────────
 export function computeBollinger(data: DataPoint[]): BollingerPoint[] {
-  const stats = bollingerStats(data);
-  // Trendline drawn across full 12 months
   const { slope, intercept, startIndex } = trendlineSlope(data, 365);
+
   return data.map((d, i) => {
-    const s = stats.get(d.wd);
-    const mean = s?.mean ?? d.balance;
-    const upper = s?.upper ?? d.balance;
-    const lower = s?.lower ?? 0;
+    // Rolling bands — only use data available at this point in time
+    const { mean, upper, lower } = rollingBollingerStats(data, i);
+
     const localIdx = i - startIndex;
     const trend = localIdx >= 0 ? intercept + slope * localIdx : NaN;
+
     let breakout: "above" | "below" | null = null;
     if (d.balance > upper) breakout = "above";
     else if (d.balance < lower) breakout = "below";
+
     return { ...d, mean, upper, lower, trend, breakout };
   });
 }
 
 export type TrendDirection = "up" | "down" | "flat";
 
-// Direction reported on 90-day rolling window
 export function trendDirection(data: DataPoint[]): TrendDirection {
   const slice = data.slice(-90);
   if (slice.length < 2) return "flat";
@@ -83,7 +134,6 @@ export function trendDirection(data: DataPoint[]): TrendDirection {
   return "flat";
 }
 
-// 90-day % change for reporting
 export function trendPercentChange(data: DataPoint[], windowDays = 90) {
   const slice = data.slice(-windowDays);
   if (slice.length < 2) return 0;
@@ -105,8 +155,6 @@ export function todayStatus(data: BollingerPoint[]): {
   return { point: p, status };
 }
 
-// Returns how far outside the band the latest point is, as a %.
-// Also returns which boundary was breached and its value.
 export function breakoutInfo(series: BollingerPoint[]): {
   pct: number;
   boundary: number;
