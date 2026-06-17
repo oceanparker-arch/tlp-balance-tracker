@@ -308,12 +308,6 @@ function Dashboard() {
                         {pBI.boundaryLabel}: {formatGBP(pBI.boundary)}
                       </div>
                     )}
-                    <div className="mt-3">
-                      <Sparkline
-                        data={p.raw}
-                        color={p.status === "within" ? "#2E7D8A" : p.status === "above" ? "#C8773A" : "#E74C3C"}
-                      />
-                    </div>
                   </Link>
                 );
               })}
