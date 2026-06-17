@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import {
   ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  ReferenceLine, Scatter,
+  ReferenceLine,
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import type { BollingerPoint } from "@/data/bollinger";
@@ -13,7 +13,20 @@ interface Props {
   showWdAxis?: boolean;
 }
 
+// Recharts band fill trick: render a "bandwidth" area stacked on top of lower.
+// We pass lower as the baseline and (upper - lower) as the value so the fill
+// sits exactly between the two bands.
+function buildBandData(data: BollingerPoint[]) {
+  return data.map((d) => ({
+    ...d,
+    bandBase: d.lower,
+    bandWidth: Math.max(0, d.upper - d.lower),
+  }));
+}
+
 export function BollingerChart({ data, height = 320, showWdAxis = false }: Props) {
+  const bandData = useMemo(() => buildBandData(data), [data]);
+
   const monthMarks = useMemo(() => {
     if (showWdAxis) return [];
     const marks: { date: string; label: string }[] = [];
@@ -28,90 +41,127 @@ export function BollingerChart({ data, height = 320, showWdAxis = false }: Props
     return marks;
   }, [data, showWdAxis]);
 
-  const breakouts = data.filter((d) => d.breakout);
+  // Custom dot renderer for breakout points — sits exactly on the balance line
+  const BreakoutDot = (props: any) => {
+    const { cx, cy, payload } = props;
+    if (!payload?.breakout || cx == null || cy == null) return null;
+    const fill = payload.breakout === "above" ? "#E74C3C" : "#E74C3C";
+    return <circle cx={cx} cy={cy} r={4} fill={fill} stroke="#fff" strokeWidth={1.5} />;
+  };
 
   return (
     <div style={{ width: "100%", height }}>
       <ResponsiveContainer>
-        <ComposedChart data={data} margin={{ top: 24, right: 16, left: 8, bottom: 8 }}>
+        <ComposedChart data={bandData} margin={{ top: 28, right: 16, left: 8, bottom: 8 }}>
           <defs>
-            <linearGradient id="bbFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#1F4E79" stopOpacity={0.2} />
-              <stop offset="100%" stopColor="#1F4E79" stopOpacity={0.2} />
+            <linearGradient id="bbGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#4A90D9" stopOpacity={0.18} />
+              <stop offset="100%" stopColor="#4A90D9" stopOpacity={0.10} />
             </linearGradient>
           </defs>
+
           <XAxis
             dataKey={showWdAxis ? "wd" : "date"}
             tick={showWdAxis ? { fill: "#718096", fontSize: 11 } : false}
             tickLine={false}
             axisLine={{ stroke: "#E2E8F0" }}
-            interval="preserveStartEnd"
           />
           <YAxis
             tickFormatter={(v) => formatGBP(v, { compact: true })}
             tick={{ fill: "#718096", fontSize: 11 }}
             tickLine={false}
             axisLine={false}
-            width={56}
+            width={60}
           />
+
           <Tooltip
             content={({ active, payload }) => {
               if (!active || !payload?.length) return null;
               const p = payload[0].payload as BollingerPoint;
-              const status = p.breakout === "above" ? "Above band" : p.breakout === "below" ? "Below band" : "Within band";
+              const status = p.breakout === "above" ? "Above upper band" : p.breakout === "below" ? "Below lower band" : "Within band";
               const color = p.breakout ? "#E74C3C" : "#27AE60";
               return (
                 <div className="rounded-md border border-border bg-white px-3 py-2 text-xs shadow-md">
-                  <div className="font-medium text-text-primary">{format(parseISO(p.date), "EEE dd MMM yyyy")}</div>
-                  <div className="mt-1 text-text-primary">{formatGBP(p.balance)}</div>
-                  <div className="mt-0.5" style={{ color }}>{status}</div>
+                  <div className="font-semibold text-text-primary mb-1">
+                    {showWdAxis ? `WD ${p.wd}` : format(parseISO(p.date), "EEE dd MMM yyyy")}
+                  </div>
+                  <div className="text-text-primary">{formatGBP(p.balance)}</div>
+                  <div className="mt-0.5 font-medium" style={{ color }}>{status}</div>
+                  <div className="mt-1 text-text-secondary border-t border-border pt-1">
+                    <span>Upper: {formatGBP(p.upper)}</span>
+                    <span className="mx-2">·</span>
+                    <span>Lower: {formatGBP(p.lower)}</span>
+                  </div>
                 </div>
               );
             }}
           />
+
+          {/* Band base — invisible, just sets the floor for the stacked area */}
           <Area
             type="monotone"
-            dataKey="upper"
+            dataKey="bandBase"
             stroke="none"
-            fill="url(#bbFill)"
-            activeDot={false}
+            fill="none"
+            legendType="none"
             isAnimationActive={false}
+            activeDot={false}
           />
+
+          {/* Band width — fills from lower to upper with light blue */}
           <Area
             type="monotone"
-            dataKey="lower"
-            stroke="none"
-            fill="#F8F9FA"
-            activeDot={false}
+            dataKey="bandWidth"
+            stackId="band"
+            stroke="rgba(74,144,217,0.3)"
+            strokeWidth={0.5}
+            fill="url(#bbGrad)"
+            legendType="none"
             isAnimationActive={false}
+            activeDot={false}
+            baseValue="bandBase"
           />
+
+          {/* Month separator lines with labels */}
           {!showWdAxis && monthMarks.map((m) => (
             <ReferenceLine
               key={m.date}
               x={m.date}
               stroke="#CBD5E0"
               strokeDasharray="3 4"
-              label={{ value: m.label, position: "insideTopLeft", fill: "#718096", fontSize: 11, dy: -18 }}
+              strokeWidth={1}
+              label={{
+                value: m.label,
+                position: "insideTopLeft",
+                fill: "#A0AEC0",
+                fontSize: 11,
+                dy: -22,
+              }}
             />
           ))}
+
+          {/* Trendline — dashed grey */}
           <Line
             type="monotone"
             dataKey="trend"
-            stroke="#999"
-            strokeDasharray="4 4"
+            stroke="#AAAAAA"
+            strokeDasharray="5 4"
             strokeWidth={1}
             dot={false}
+            legendType="none"
             isAnimationActive={false}
           />
+
+          {/* Closing balance — solid dark blue line with breakout dots */}
           <Line
             type="monotone"
             dataKey="balance"
             stroke="#1F4E79"
             strokeWidth={2}
-            dot={false}
+            dot={<BreakoutDot />}
+            activeDot={{ r: 4, fill: "#1F4E79" }}
             isAnimationActive={false}
           />
-          <Scatter data={breakouts} dataKey="balance" fill="#E74C3C" shape="circle" isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>
     </div>
@@ -126,15 +176,15 @@ export function ChartLegend() {
         Closing balance
       </div>
       <div className="flex items-center gap-2">
-        <span className="block h-3 w-6 rounded-sm" style={{ background: "rgba(31,78,121,0.2)" }} />
+        <span className="block h-3 w-6 rounded-sm" style={{ background: "rgba(74,144,217,0.18)", border: "0.5px solid rgba(74,144,217,0.35)" }} />
         Expected range ±2σ
       </div>
       <div className="flex items-center gap-2">
-        <span className="block h-0 w-6 border-t border-dashed" style={{ borderColor: "#999" }} />
+        <span className="block w-6" style={{ borderTop: "1.5px dashed #AAAAAA" }} />
         Trendline
       </div>
       <div className="flex items-center gap-2">
-        <span className="block h-2 w-2 rounded-full" style={{ background: "#E74C3C" }} />
+        <span className="block h-2.5 w-2.5 rounded-full" style={{ background: "#E74C3C" }} />
         Breakout flag
       </div>
     </div>
