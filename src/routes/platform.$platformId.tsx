@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useDashboardData } from "@/data/useDashboardData";
 import { TopNav } from "@/components/TopNav";
 import { BollingerChart, ChartLegend } from "@/components/BollingerChart";
-import { Sparkline } from "@/components/Sparkline";
+
 import { StatusPill, TrendArrow } from "@/components/StatusPill";
 import { formatGBP } from "@/lib/format";
 import { trendPercentChange, breakoutInfo } from "@/data/bollinger";
