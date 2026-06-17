@@ -97,10 +97,7 @@ function PlatformPage() {
                         <td className="px-5 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
                         <td className="px-5 py-3"><StatusPill status={a.status} pct={a.breakoutPct ?? undefined} /></td>
                         <td className="px-5 py-3">
-                          <div className="flex items-center gap-3">
-                            <TrendArrow trend={a.trend} pct={pct} label="90d" />
-                            <div style={{ width: 100 }}><Sparkline data={a.raw} height={36} /></div>
-                          </div>
+                          <TrendArrow trend={a.trend} pct={pct} label="90d" />
                         </td>
                       </tr>
                     );
