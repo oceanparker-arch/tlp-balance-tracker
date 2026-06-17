@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useDashboardData } from "@/data/useDashboardData";
 import { TopNav } from "@/components/TopNav";
-import { BollingerChart, ChartLegend } from "@/components/BollingerChart";
+import { BollingerChart } from "@/components/BollingerChart";
 import { Sparkline } from "@/components/Sparkline";
 import { PlatformBadge, StatusPill, TrendArrow } from "@/components/StatusPill";
 import { formatGBP } from "@/lib/format";
@@ -36,7 +36,6 @@ function Dashboard() {
             <h2 className="text-lg font-semibold text-text-primary">TLP Aggregate Client Account Balance</h2>
           </div>
 
-          <div className="mb-3"><ChartLegend /></div>
           {data.loading ? <Skeleton className="h-[320px]" /> : <BollingerChart data={data.aggregate} height={320} />}
         </section>
 
