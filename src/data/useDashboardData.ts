@@ -131,9 +131,11 @@ function buildPlatforms(
 
   return Array.from(allPlatformIds.entries()).map(([pid, pname]) => {
     const pAgents = agents.filter((a) => a.platformId === pid);
-    const raw = combineSeries(
+    const rawAll = combineSeries(
       merged.filter((m) => m.series.platformId === pid).map((m) => m.series),
     );
+    // Rolling 12 months for platform chart
+    const raw = rawAll.slice(-365);
     const series = computeBollinger(raw);
     const ts = todayStatus(series) ?? null;
     return {
@@ -169,10 +171,14 @@ async function buildAll(): Promise<Omit<DashboardData, "loading">> {
   const replacedKeys = new Set([...liveApiKeys, ...importedKeys]);
 
   const merged: { series: AgentSeries; isLive: boolean }[] = [
-    // Mock agents not replaced by live data
-    ...mockSeries
-      .filter((s) => !replacedKeys.has(liveKey(s.platformId, s.agentId)))
-      .map((s) => ({ series: s, isLive: false })),
+    // Only include mock agents when there is NO live API data at all.
+    // Once real data is flowing, mock placeholders are hidden entirely.
+    ...(!usingLiveData
+      ? mockSeries
+          .filter((s) => !replacedKeys.has(liveKey(s.platformId, s.agentId)))
+          .map((s) => ({ series: s, isLive: false }))
+      : []
+    ),
 
     // Live API agents
     ...(liveSeries ?? []).map((s) => ({ series: s, isLive: true })),
@@ -198,7 +204,9 @@ async function buildAll(): Promise<Omit<DashboardData, "loading">> {
 
   const platformRecords = buildPlatforms(merged, agents, replacedKeys);
 
-  const aggregateRaw    = combineSeries(merged.map((m) => m.series));
+  const aggregateRawAll = combineSeries(merged.map((m) => m.series));
+  // Rolling 12 months for main chart
+  const aggregateRaw    = aggregateRawAll.slice(-365);
   const aggregate       = computeBollinger(aggregateRaw);
   const aggregateLatest = aggregate.length ? aggregate[aggregate.length - 1] : null;
   const breakouts       = agents.filter((a) => a.status !== "within");
