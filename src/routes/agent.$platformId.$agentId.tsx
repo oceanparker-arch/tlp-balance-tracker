@@ -6,7 +6,7 @@ import { TopNav } from "@/components/TopNav";
 import { BollingerChart, ChartLegend } from "@/components/BollingerChart";
 import { StatusPill, TrendArrow } from "@/components/StatusPill";
 import { formatGBP } from "@/lib/format";
-import { trendPercentChange } from "@/data/bollinger";
+import { trendPercentChange, breakoutInfo } from "@/data/bollinger";
 
 export const Route = createFileRoute("/agent/$platformId/$agentId")({
   head: () => ({
@@ -69,7 +69,7 @@ function AgentPage() {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <StatCard label="Today's closing balance" value={formatGBP(agent.latest.balance)} />
-              <StatCard label="Band status" value={<StatusPill status={agent.status} />} sub={`Mean ${formatGBP(agent.latest.mean)}`} />
+              <StatCard label="Band status" value={<StatusPill status={agent.status} pct={breakoutInfo(agent.series)?.pct} />} sub={`Mean ${formatGBP(agent.latest.mean)}`} />
               <StatCard
                 label="90-day trend"
                 value={<TrendArrow trend={agent.trend} pct={pct} />}

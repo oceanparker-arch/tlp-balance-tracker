@@ -6,7 +6,7 @@ import { Sparkline } from "@/components/Sparkline";
 import { PlatformBadge, StatusPill, TrendArrow } from "@/components/StatusPill";
 import { LiveBadge } from "@/components/LiveBadge";
 import { formatGBP } from "@/lib/format";
-import { trendPercentChange } from "@/data/bollinger";
+import { trendPercentChange, breakoutInfo } from "@/data/bollinger";
 
 export const Route = createFileRoute("/")(({
   head: () => ({
@@ -34,12 +34,30 @@ function StatCard({ label, value, sub }: { label: string; value: React.ReactNode
 
 function Dashboard() {
   const data = useDashboardData();
-  const trendDownAgents = data.loading ? [] : data.agents.filter((a) => a.trend === "down");
+  // Trend alerts: trending down only, sorted by steepest % drop
+  const trendAlerts = data.loading
+    ? []
+    : data.agents
+        .filter((a) => a.trend === "down")
+        .map((a) => ({ ...a, trendPct: trendPercentChange(a.raw, 90) }))
+        .sort((a, b) => a.trendPct - b.trendPct); // most negative first
 
-  // Aggregate stats
+  // Breakout alerts sorted by biggest % outside band
+  const sortedBreakouts = data.loading
+    ? []
+    : [...data.breakouts].sort((a, b) => (b.breakoutPct ?? 0) - (a.breakoutPct ?? 0));
+
   const aggLatest = data.aggregateLatest;
   const aggPct = data.loading ? 0 : trendPercentChange(data.aggregate, 90);
   const aggTrend = aggPct > 5 ? "up" : aggPct < -5 ? "down" : "flat";
+  const aggBreakout = data.loading ? null : breakoutInfo(data.aggregate);
+
+  // Band status sub label for main stat card
+  const bandSub = aggLatest
+    ? aggBreakout
+      ? `${aggBreakout.boundaryLabel}: ${formatGBP(aggBreakout.boundary)}`
+      : `Mean ${formatGBP(aggLatest.mean)}`
+    : null;
 
   return (
     <div className="min-h-screen bg-surface">
@@ -55,19 +73,20 @@ function Dashboard() {
             </span>
           </div>
 
-          {/* Summary stat row */}
           {data.loading ? (
             <Skeleton className="h-20 mb-4" />
           ) : (
             <div className="grid grid-cols-2 gap-3 mb-5 sm:grid-cols-4">
-              <StatCard
-                label="Total balance"
-                value={formatGBP(aggLatest?.balance ?? 0)}
-              />
+              <StatCard label="Total balance" value={formatGBP(aggLatest?.balance ?? 0)} />
               <StatCard
                 label="Band status"
-                value={<StatusPill status={aggLatest?.breakout === "above" ? "above" : aggLatest?.breakout === "below" ? "below" : "within"} />}
-                sub={`Mean ${formatGBP(aggLatest?.mean ?? 0)}`}
+                value={
+                  <StatusPill
+                    status={aggLatest?.breakout === "above" ? "above" : aggLatest?.breakout === "below" ? "below" : "within"}
+                    pct={aggBreakout?.pct}
+                  />
+                }
+                sub={bandSub}
               />
               <StatCard
                 label="90-day trend"
@@ -87,7 +106,7 @@ function Dashboard() {
           )}
         </section>
 
-        {/* Section 2: Breakout Alerts */}
+        {/* Section 2: Breakout Alerts — sorted by biggest % breakout */}
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <div className="mb-4 flex items-center gap-3">
             <h2 className="text-lg font-semibold text-text-primary">Breakout Alerts</h2>
@@ -95,12 +114,12 @@ function Dashboard() {
               className="inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-xs font-semibold text-white"
               style={{ background: "var(--tlp-red)" }}
             >
-              {data.loading ? "…" : data.breakouts.length}
+              {data.loading ? "…" : sortedBreakouts.length}
             </span>
           </div>
           {data.loading ? (
             <Skeleton className="h-32" />
-          ) : data.breakouts.length === 0 ? (
+          ) : sortedBreakouts.length === 0 ? (
             <div
               className="rounded-md border px-4 py-6 text-sm"
               style={{ background: "rgba(39,174,96,0.08)", borderColor: "rgba(39,174,96,0.25)", color: "#1d8049" }}
@@ -111,10 +130,11 @@ function Dashboard() {
             <div className="overflow-hidden rounded-md border border-border">
               <table className="w-full table-fixed text-sm">
                 <colgroup>
-                  <col className="w-[30%]" />
+                  <col className="w-[28%]" />
+                  <col className="w-[16%]" />
                   <col className="w-[20%]" />
-                  <col className="w-[25%]" />
-                  <col className="w-[25%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[16%]" />
                 </colgroup>
                 <thead className="bg-secondary text-left text-xs uppercase tracking-wide text-text-secondary">
                   <tr>
@@ -122,10 +142,11 @@ function Dashboard() {
                     <th className="px-4 py-2.5">Platform</th>
                     <th className="px-4 py-2.5 text-right">Closing balance</th>
                     <th className="px-4 py-2.5">Breakout</th>
+                    <th className="px-4 py-2.5 text-right">Band boundary</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.breakouts.slice(0, 10).map((a) => (
+                  {sortedBreakouts.slice(0, 10).map((a) => (
                     <tr
                       key={`${a.platformId}-${a.agentId}`}
                       className="border-t border-border"
@@ -147,17 +168,21 @@ function Dashboard() {
                       <td className="px-4 py-3"><PlatformBadge name={a.platformName} /></td>
                       <td className="px-4 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
                       <td className="px-4 py-3">
-                        {a.status === "above" ? (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: "rgba(200,119,58,0.13)", color: "#C8773A" }}>↑ Above upper</span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: "rgba(231,76,60,0.12)", color: "#E74C3C" }}>↓ Below lower</span>
-                        )}
+                        <StatusPill status={a.status} pct={a.breakoutPct ?? undefined} />
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums text-text-secondary text-xs">
+                        {a.breakoutBoundary != null ? (
+                          <div>
+                            <div className="text-[10px] text-text-secondary">{a.breakoutBoundaryLabel}</div>
+                            <div className="font-medium text-text-primary">{formatGBP(a.breakoutBoundary)}</div>
+                          </div>
+                        ) : "—"}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {data.breakouts.length > 10 && (
+              {sortedBreakouts.length > 10 && (
                 <div className="border-t border-border bg-secondary px-4 py-2 text-right text-xs">
                   <a href="#" className="font-medium hover:underline" style={{ color: "var(--teal)" }}>View all →</a>
                 </div>
@@ -166,20 +191,20 @@ function Dashboard() {
           )}
         </section>
 
-        {/* Section 3: Trend Down Alerts */}
+        {/* Section 3: Trend Alerts — trending down, sorted by steepest drop, within band only */}
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <div className="mb-4 flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-text-primary">Trending Down (90 days)</h2>
+            <h2 className="text-lg font-semibold text-text-primary">Trend Alerts</h2>
             <span
               className="inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-xs font-semibold text-white"
               style={{ background: "#C8773A" }}
             >
-              {data.loading ? "…" : trendDownAgents.length}
+              {data.loading ? "…" : trendAlerts.length}
             </span>
           </div>
           {data.loading ? (
             <Skeleton className="h-32" />
-          ) : trendDownAgents.length === 0 ? (
+          ) : trendAlerts.length === 0 ? (
             <div
               className="rounded-md border px-4 py-6 text-sm"
               style={{ background: "rgba(39,174,96,0.08)", borderColor: "rgba(39,174,96,0.25)", color: "#1d8049" }}
@@ -200,47 +225,42 @@ function Dashboard() {
                     <th className="px-4 py-2.5">Agent</th>
                     <th className="px-4 py-2.5">Platform</th>
                     <th className="px-4 py-2.5 text-right">Closing balance</th>
-                    <th className="px-4 py-2.5">Band status</th>
+                    <th className="px-4 py-2.5">90-day trend</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {trendDownAgents.slice(0, 10).map((a) => {
-                    const pct = trendPercentChange(a.raw, 90);
-                    return (
-                      <tr
-                        key={`${a.platformId}-${a.agentId}`}
-                        className="border-t border-border"
-                        style={{ borderLeft: "3px solid #C8773A" }}
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Link
-                              to="/agent/$platformId/$agentId"
-                              params={{ platformId: a.platformId, agentId: a.agentId }}
-                              className="font-semibold hover:underline truncate"
-                              style={{ color: "var(--teal)" }}
-                            >
-                              {a.agentName}
-                            </Link>
-                            {a.isLive && <LiveBadge />}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3"><PlatformBadge name={a.platformName} /></td>
-                        <td className="px-4 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col gap-0.5">
-                            <StatusPill status={a.status} />
-                            <span className="text-xs" style={{ color: "#E74C3C" }}>
-                              ↘ {Math.abs(pct).toFixed(1)}% (90d)
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {trendAlerts.slice(0, 10).map((a) => (
+                    <tr
+                      key={`${a.platformId}-${a.agentId}`}
+                      className="border-t border-border"
+                      style={{ borderLeft: "3px solid #C8773A" }}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to="/agent/$platformId/$agentId"
+                            params={{ platformId: a.platformId, agentId: a.agentId }}
+                            className="font-semibold hover:underline truncate"
+                            style={{ color: "var(--teal)" }}
+                          >
+                            {a.agentName}
+                          </Link>
+                          {a.isLive && <LiveBadge />}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3"><PlatformBadge name={a.platformName} /></td>
+                      <td className="px-4 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-semibold" style={{ color: "#E74C3C" }}>
+                          ↘ {Math.abs(a.trendPct).toFixed(1)}%
+                        </span>
+                        <span className="text-xs text-text-secondary ml-1">(90d)</span>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
-              {trendDownAgents.length > 10 && (
+              {trendAlerts.length > 10 && (
                 <div className="border-t border-border bg-secondary px-4 py-2 text-right text-xs">
                   <a href="#" className="font-medium hover:underline" style={{ color: "var(--teal)" }}>View all →</a>
                 </div>
@@ -260,6 +280,7 @@ function Dashboard() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {data.platforms.map((p) => {
                 const pct = trendPercentChange(p.raw, 90);
+                const pBI = breakoutInfo(p.series);
                 return (
                   <Link
                     key={p.id}
@@ -279,9 +300,15 @@ function Dashboard() {
                       {formatGBP(p.latest.balance)}
                     </div>
                     <div className="mt-2 flex items-center gap-3 text-xs">
-                      <StatusPill status={p.status} />
+                      <StatusPill status={p.status} pct={pBI?.pct} />
                       <TrendArrow trend={p.trend} pct={pct} label="90d" />
                     </div>
+                    {/* Show boundary if in breakout */}
+                    {pBI && (
+                      <div className="mt-1 text-xs text-text-secondary">
+                        {pBI.boundaryLabel}: {formatGBP(pBI.boundary)}
+                      </div>
+                    )}
                     <div className="mt-3">
                       <Sparkline
                         data={p.raw}

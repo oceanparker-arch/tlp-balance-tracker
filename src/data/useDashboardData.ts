@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getAllAgentSeries, combineSeries, platforms, type AgentSeries, type DataPoint } from "./mockData";
-import { computeBollinger, trendDirection, todayStatus, type BollingerPoint } from "./bollinger";
+import { computeBollinger, trendDirection, todayStatus, breakoutInfo, type BollingerPoint } from "./bollinger";
 import {
   listImportedAgents,
   onImportedAgentsChange,
@@ -18,6 +18,9 @@ export interface AgentRecord {
   status: "within" | "above" | "below";
   trend: "up" | "down" | "flat";
   isLive: boolean;
+  breakoutPct: number | null;
+  breakoutBoundary: number | null;
+  breakoutBoundaryLabel: string | null;
 }
 
 export interface PlatformRecord {
@@ -45,6 +48,7 @@ export interface DashboardData {
 function buildAgent(s: AgentSeries, isLive: boolean): AgentRecord {
   const series = computeBollinger(s.data);
   const ts = todayStatus(series)!;
+  const bi = breakoutInfo(series);
   return {
     platformId: s.platformId,
     platformName: s.platformName,
@@ -56,6 +60,9 @@ function buildAgent(s: AgentSeries, isLive: boolean): AgentRecord {
     status: ts.status,
     trend: trendDirection(s.data),
     isLive,
+    breakoutPct: bi?.pct ?? null,
+    breakoutBoundary: bi?.boundary ?? null,
+    breakoutBoundaryLabel: bi?.boundaryLabel ?? null,
   };
 }
 

@@ -36,6 +36,15 @@ export function BollingerChart({ data, height = 320, showWdAxis = false, agentNa
     [data],
   );
 
+  // Determine trendline colour from slope direction
+  const trendColor = useMemo(() => {
+    if (data.length < 2) return "#AAAAAA";
+    const first = data[0].trend;
+    const last = data[data.length - 1].trend;
+    if (isNaN(first) || isNaN(last)) return "#AAAAAA";
+    return last > first ? "#27AE60" : last < first ? "#E74C3C" : "#AAAAAA";
+  }, [data]);
+
   const monthMeta = useMemo(() => {
     if (showWdAxis) return { starts: [] as string[], centres: new Map<string, string>() };
     const groups = new Map<string, string[]>();
@@ -136,13 +145,13 @@ export function BollingerChart({ data, height = 320, showWdAxis = false, agentNa
               <ReferenceLine key={d} x={d} stroke="#CBD5E0" strokeDasharray="3 4" strokeWidth={1} />
             ))}
 
-            {/* 12-month trendline — dashed grey */}
+            {/* 12-month trendline — coloured by direction */}
             <Line
               type="monotone"
               dataKey="trend"
-              stroke="#AAAAAA"
+              stroke={trendColor}
               strokeDasharray="5 4"
-              strokeWidth={1}
+              strokeWidth={1.5}
               dot={false}
               isAnimationActive={false}
             />
@@ -187,7 +196,8 @@ export function ChartLegend() {
         Expected range ±2σ
       </div>
       <div className="flex items-center gap-2">
-        <span className="block w-6" style={{ borderTop: "1.5px dashed #AAAAAA" }} />
+        <span className="block w-6" style={{ borderTop: "1.5px dashed #27AE60" }} />
+        <span className="block w-4" style={{ borderTop: "1.5px dashed #E74C3C" }} />
         Trendline (12M)
       </div>
       <div className="flex items-center gap-2">

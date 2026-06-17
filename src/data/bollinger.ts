@@ -104,3 +104,27 @@ export function todayStatus(data: BollingerPoint[]): {
   else if (p.breakout === "below") status = "below";
   return { point: p, status };
 }
+
+// Returns how far outside the band the latest point is, as a %.
+// Also returns which boundary was breached and its value.
+export function breakoutInfo(series: BollingerPoint[]): {
+  pct: number;
+  boundary: number;
+  boundaryLabel: "Upper band" | "Lower band";
+} | null {
+  if (!series.length) return null;
+  const p = series[series.length - 1];
+  if (!p.breakout) return null;
+  if (p.breakout === "above") {
+    return {
+      pct: p.upper > 0 ? ((p.balance - p.upper) / p.upper) * 100 : 0,
+      boundary: p.upper,
+      boundaryLabel: "Upper band",
+    };
+  }
+  return {
+    pct: p.lower > 0 ? ((p.lower - p.balance) / p.lower) * 100 : 0,
+    boundary: p.lower,
+    boundaryLabel: "Lower band",
+  };
+}
