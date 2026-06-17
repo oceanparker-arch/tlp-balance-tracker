@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { getAllAgentSeries, combineSeries, platforms, type AgentSeries, type DataPoint } from "./mockData";
 import { computeBollinger, trendDirection, todayStatus, type BollingerPoint } from "./bollinger";
+import {
+  listImportedAgents,
+  onImportedAgentsChange,
+  importedRowsToDataPoints,
+} from "./importedAgents";
 
 export interface AgentRecord {
   platformId: string;
@@ -12,6 +17,7 @@ export interface AgentRecord {
   latest: BollingerPoint;
   status: "within" | "above" | "below";
   trend: "up" | "down" | "flat";
+  isLive: boolean;
 }
 
 export interface PlatformRecord {
@@ -36,7 +42,7 @@ export interface DashboardData {
   breakouts: AgentRecord[];
 }
 
-function buildAgent(s: AgentSeries): AgentRecord {
+function buildAgent(s: AgentSeries, isLive: boolean): AgentRecord {
   const series = computeBollinger(s.data);
   const ts = todayStatus(series)!;
   return {
@@ -49,32 +55,59 @@ function buildAgent(s: AgentSeries): AgentRecord {
     latest: ts.point,
     status: ts.status,
     trend: trendDirection(s.data),
+    isLive,
   };
 }
 
 function buildAll(): Omit<DashboardData, "loading"> {
-  const allSeries = getAllAgentSeries();
-  const agents = allSeries.map(buildAgent);
+  const mockSeries = getAllAgentSeries();
+  const imported = listImportedAgents();
+  const liveKey = (p: string, a: string) => `${p}::${a}`;
+  const liveSet = new Set(imported.map((i) => liveKey(i.platformId, i.agentId)));
+
+  // Replace mock data for imported agents, and add any net-new imported agents.
+  const merged: { series: AgentSeries; isLive: boolean }[] = mockSeries
+    .filter((s) => !liveSet.has(liveKey(s.platformId, s.agentId)))
+    .map((s) => ({ series: s, isLive: false }));
+
+  for (const i of imported) {
+    merged.push({
+      series: {
+        platformId: i.platformId,
+        platformName: i.platformName,
+        agentId: i.agentId,
+        agentName: i.agentName,
+        data: importedRowsToDataPoints(i.points),
+      },
+      isLive: true,
+    });
+  }
+
+  const agents = merged
+    .filter((m) => m.series.data.length > 0)
+    .map((m) => buildAgent(m.series, m.isLive));
 
   const platformRecords: PlatformRecord[] = platforms.map((p) => {
     const pAgents = agents.filter((a) => a.platformId === p.id);
-    const raw = combineSeries(allSeries.filter((s) => s.platformId === p.id));
+    const raw = combineSeries(
+      merged.filter((m) => m.series.platformId === p.id).map((m) => m.series),
+    );
     const series = computeBollinger(raw);
-    const ts = todayStatus(series)!;
+    const ts = todayStatus(series) ?? null;
     return {
       id: p.id,
       name: p.name,
       agents: pAgents,
       raw,
       series,
-      latest: ts.point,
-      status: ts.status,
+      latest: ts ? ts.point : ({} as BollingerPoint),
+      status: ts ? ts.status : "within",
       trend: trendDirection(raw),
       hasBreakout: pAgents.some((a) => a.status !== "within"),
     };
   });
 
-  const aggregateRaw = combineSeries(allSeries);
+  const aggregateRaw = combineSeries(merged.map((m) => m.series));
   const aggregate = computeBollinger(aggregateRaw);
   const aggregateLatest = aggregate.length ? aggregate[aggregate.length - 1] : null;
   const breakouts = agents.filter((a) => a.status !== "within");
@@ -92,13 +125,18 @@ function buildAll(): Omit<DashboardData, "loading"> {
 export function useDashboardData(): DashboardData {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<Omit<DashboardData, "loading"> | null>(null);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     const t = setTimeout(() => {
       setData(buildAll());
       setLoading(false);
-    }, 800);
+    }, version === 0 ? 800 : 0);
     return () => clearTimeout(t);
+  }, [version]);
+
+  useEffect(() => {
+    return onImportedAgentsChange(() => setVersion((v) => v + 1));
   }, []);
 
   if (loading || !data) {

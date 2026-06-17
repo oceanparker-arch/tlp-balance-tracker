@@ -5,6 +5,7 @@ import { TopNav } from "@/components/TopNav";
 import { BollingerChart, ChartLegend } from "@/components/BollingerChart";
 import { Sparkline } from "@/components/Sparkline";
 import { StatusPill, TrendArrow } from "@/components/StatusPill";
+import { LiveBadge } from "@/components/LiveBadge";
 import { formatGBP } from "@/lib/format";
 
 export const Route = createFileRoute("/platform/$platformId")({
@@ -88,14 +89,17 @@ function PlatformPage() {
                   {sortedAgents.map((a) => (
                     <tr key={a.agentId} className="border-t border-border">
                       <td className="px-5 py-3">
-                        <Link
-                          to="/agent/$platformId/$agentId"
-                          params={{ platformId: a.platformId, agentId: a.agentId }}
-                          className="font-semibold hover:underline"
-                          style={{ color: "var(--teal)" }}
-                        >
-                          {a.agentName}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to="/agent/$platformId/$agentId"
+                            params={{ platformId: a.platformId, agentId: a.agentId }}
+                            className="font-semibold hover:underline"
+                            style={{ color: "var(--teal)" }}
+                          >
+                            {a.agentName}
+                          </Link>
+                          {a.isLive && <LiveBadge />}
+                        </div>
                       </td>
                       <td className="px-5 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
                       <td className="px-5 py-3"><StatusPill status={a.status} /></td>
