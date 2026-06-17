@@ -9,38 +9,88 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PlatformPlatformIdRouteImport } from './routes/platform.$platformId'
+import { Route as AgentPlatformIdAgentIdRouteImport } from './routes/agent.$platformId.$agentId'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlatformPlatformIdRoute = PlatformPlatformIdRouteImport.update({
+  id: '/platform/$platformId',
+  path: '/platform/$platformId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentPlatformIdAgentIdRoute = AgentPlatformIdAgentIdRouteImport.update({
+  id: '/agent/$platformId/$agentId',
+  path: '/agent/$platformId/$agentId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/platform/$platformId': typeof PlatformPlatformIdRoute
+  '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/platform/$platformId': typeof PlatformPlatformIdRoute
+  '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/platform/$platformId': typeof PlatformPlatformIdRoute
+  '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/sitemap.xml'
+    | '/platform/$platformId'
+    | '/agent/$platformId/$agentId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/sitemap.xml'
+    | '/platform/$platformId'
+    | '/agent/$platformId/$agentId'
+  id:
+    | '__root__'
+    | '/'
+    | '/sitemap.xml'
+    | '/platform/$platformId'
+    | '/agent/$platformId/$agentId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  PlatformPlatformIdRoute: typeof PlatformPlatformIdRoute
+  AgentPlatformIdAgentIdRoute: typeof AgentPlatformIdAgentIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +98,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/platform/$platformId': {
+      id: '/platform/$platformId'
+      path: '/platform/$platformId'
+      fullPath: '/platform/$platformId'
+      preLoaderRoute: typeof PlatformPlatformIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/$platformId/$agentId': {
+      id: '/agent/$platformId/$agentId'
+      path: '/agent/$platformId/$agentId'
+      fullPath: '/agent/$platformId/$agentId'
+      preLoaderRoute: typeof AgentPlatformIdAgentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  PlatformPlatformIdRoute: PlatformPlatformIdRoute,
+  AgentPlatformIdAgentIdRoute: AgentPlatformIdAgentIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
