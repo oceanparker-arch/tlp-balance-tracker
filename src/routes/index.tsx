@@ -254,7 +254,6 @@ function Dashboard() {
                         <span className="text-sm font-semibold" style={{ color: "#E74C3C" }}>
                           ↘ {Math.abs(a.trendPct).toFixed(1)}%
                         </span>
-                        <span className="text-xs text-text-secondary ml-1">(90d)</span>
                       </td>
                     </tr>
                   ))}
