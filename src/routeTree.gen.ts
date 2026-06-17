@@ -10,33 +10,53 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PlatformPlatformIdRouteImport } from './routes/platform.$platformId'
+import { Route as AgentPlatformIdAgentIdRouteImport } from './routes/agent.$platformId.$agentId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlatformPlatformIdRoute = PlatformPlatformIdRouteImport.update({
+  id: '/platform/$platformId',
+  path: '/platform/$platformId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentPlatformIdAgentIdRoute = AgentPlatformIdAgentIdRouteImport.update({
+  id: '/agent/$platformId/$agentId',
+  path: '/agent/$platformId/$agentId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/platform/$platformId': typeof PlatformPlatformIdRoute
+  '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/platform/$platformId': typeof PlatformPlatformIdRoute
+  '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/platform/$platformId': typeof PlatformPlatformIdRoute
+  '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/platform/$platformId' | '/agent/$platformId/$agentId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/platform/$platformId' | '/agent/$platformId/$agentId'
+  id: '__root__' | '/' | '/platform/$platformId' | '/agent/$platformId/$agentId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PlatformPlatformIdRoute: typeof PlatformPlatformIdRoute
+  AgentPlatformIdAgentIdRoute: typeof AgentPlatformIdAgentIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +68,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/platform/$platformId': {
+      id: '/platform/$platformId'
+      path: '/platform/$platformId'
+      fullPath: '/platform/$platformId'
+      preLoaderRoute: typeof PlatformPlatformIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/$platformId/$agentId': {
+      id: '/agent/$platformId/$agentId'
+      path: '/agent/$platformId/$agentId'
+      fullPath: '/agent/$platformId/$agentId'
+      preLoaderRoute: typeof AgentPlatformIdAgentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PlatformPlatformIdRoute: PlatformPlatformIdRoute,
+  AgentPlatformIdAgentIdRoute: AgentPlatformIdAgentIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
