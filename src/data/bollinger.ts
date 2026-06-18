@@ -129,8 +129,13 @@ export function computeBollinger(data: DataPoint[]): BollingerPoint[] {
 
     let breakout: "above" | "below" | null = null;
     if (d.balance > 0) {
-      if (d.balance > upper) breakout = "above";
-      else if (d.balance < lower) breakout = "below";
+      if (d.balance > upper) {
+        // Only flag above-band breakouts where the breach exceeds 5%
+        const pct = upper > 0 ? ((d.balance - upper) / upper) * 100 : 0;
+        if (pct >= 5) breakout = "above";
+      } else if (d.balance < lower) {
+        breakout = "below";
+      }
     }
 
     return { ...d, mean, upper, lower, trend, breakout };
