@@ -42,8 +42,9 @@ function Dashboard() {
   const trendAlerts = data.loading
     ? []
     : data.agents
-        .filter((a) => a.trend === "down" && a.latest.mean >= 5000)
+        .filter((a) => a.trend === "down" && a.latest.mean >= 25000)
         .map((a) => ({ ...a, trendPct: trendPercentChange(a.raw) }))
+        .filter((a) => a.trendPct <= -15)
         .sort((a, b) => a.trendPct - b.trendPct); // most negative first
 
   // Breakout alerts sorted by biggest % outside band
