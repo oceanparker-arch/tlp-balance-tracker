@@ -144,8 +144,51 @@ export function computeBollinger(data: DataPoint[]): BollingerPoint[] {
 
 export type TrendDirection = "up" | "down" | "flat";
 
+// ── Calendar-period trend calculation ─────────────────────────────────────────
+// Compares the rolling 30-day average balance (working days only, balance > 0)
+// ending today against the equivalent 30-day period ending 3 months prior.
+// This avoids WD matching issues, bank holiday edge cases, and near-zero pollution.
+
+function periodAverage(data: DataPoint[], endDate: string, days = 30): number {
+  // Work backwards from endDate, collect up to `days` working-day data points
+  // with balance > 0
+  const end = new Date(endDate);
+  const points = data
+    .filter(d => {
+      const dt = new Date(d.date);
+      return dt <= end && d.balance > 0;
+    })
+    .slice(-days);
+  if (!points.length) return 0;
+  return points.reduce((s, d) => s + d.balance, 0) / points.length;
+}
+
+function threeMonthsBack(dateStr: string): string {
+  const d = new Date(dateStr);
+  d.setMonth(d.getMonth() - 3);
+  return d.toISOString().slice(0, 10);
+}
+
+export function trendPercentChange(data: DataPoint[]): number {
+  if (data.length < 2) return 0;
+  const latest    = data[data.length - 1].date;
+  const priorDate = threeMonthsBack(latest);
+  const current   = periodAverage(data, latest, 30);
+  const prior     = periodAverage(data, priorDate, 30);
+  if (!prior) return 0;
+  return ((current - prior) / prior) * 100;
+}
+
+export function trendDirection(data: DataPoint[]): TrendDirection {
+  const pct = trendPercentChange(data);
+  if (pct > 3) return "up";
+  if (pct < -3) return "down";
+  return "flat";
+}
+
+// Keep regressionSlope for the chart trendline only (visual, not for reporting)
 function regressionSlope(data: DataPoint[], windowDays = 365) {
-  const slice = data.slice(-windowDays);
+  const slice = data.slice(-windowDays).filter(d => d.balance > 0);
   if (slice.length < 2) return { slope: 0, intercept: slice[0]?.balance ?? 0, n: slice.length };
   const n = slice.length;
   let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
@@ -156,21 +199,6 @@ function regressionSlope(data: DataPoint[], windowDays = 365) {
   const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX || 1);
   const intercept = (sumY - slope * sumX) / n;
   return { slope, intercept, n };
-}
-
-export function trendDirection(data: DataPoint[]): TrendDirection {
-  const { slope, intercept, n } = regressionSlope(data, 365);
-  if (n < 2 || !intercept) return "flat";
-  const totalChange = (slope * (n - 1)) / intercept;
-  if (totalChange > 0.03) return "up";
-  if (totalChange < -0.03) return "down";
-  return "flat";
-}
-
-export function trendPercentChange(data: DataPoint[], windowDays = 365) {
-  const { slope, intercept, n } = regressionSlope(data, windowDays);
-  if (n < 2 || !intercept) return 0;
-  return ((slope * (n - 1)) / Math.abs(intercept)) * 100;
 }
 
 export function todayStatus(data: BollingerPoint[]): {

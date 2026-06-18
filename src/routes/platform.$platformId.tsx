@@ -50,7 +50,7 @@ function PlatformPage() {
                 <h2 className="text-base font-semibold text-text-primary">{platform.name} Combined Balance — Rolling 12 Months</h2>
                 <div className="flex items-center gap-3">
                   <StatusPill status={platform.status} pct={(() => { const bi = breakoutInfo(platform.series); return bi?.pct; })()} />
-                  <TrendArrow trend={platform.trend} pct={trendPercentChange(platform.raw, 90)} label="90d" />
+                  <TrendArrow trend={platform.trend} pct={trendPercentChange(platform.raw)} label="3M" />
                 </div>
               </div>
               <div className="mb-3"><ChartLegend /></div>
@@ -81,7 +81,7 @@ function PlatformPage() {
                 </thead>
                 <tbody>
                   {sortedAgents.map((a) => {
-                    const pct = trendPercentChange(a.raw, 90);
+                    const pct = trendPercentChange(a.raw);
                     return (
                       <tr key={a.agentId} className="border-t border-border">
                         <td className="px-5 py-3">
@@ -97,7 +97,7 @@ function PlatformPage() {
                         <td className="px-5 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
                         <td className="px-5 py-3"><StatusPill status={a.status} pct={a.breakoutPct ?? undefined} /></td>
                         <td className="px-5 py-3">
-                          <TrendArrow trend={a.trend} pct={pct} label="90d" />
+                          <TrendArrow trend={a.trend} pct={pct} label="3M" />
                         </td>
                       </tr>
                     );

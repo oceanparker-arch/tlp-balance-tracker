@@ -43,7 +43,7 @@ function Dashboard() {
     ? []
     : data.agents
         .filter((a) => a.trend === "down")
-        .map((a) => ({ ...a, trendPct: trendPercentChange(a.raw, 90) }))
+        .map((a) => ({ ...a, trendPct: trendPercentChange(a.raw) }))
         .sort((a, b) => a.trendPct - b.trendPct); // most negative first
 
   // Breakout alerts sorted by biggest % outside band
@@ -52,7 +52,7 @@ function Dashboard() {
     : [...data.breakouts].sort((a, b) => (b.breakoutPct ?? 0) - (a.breakoutPct ?? 0));
 
   const aggLatest = data.aggregateLatest;
-  const aggPct = data.loading ? 0 : trendPercentChange(data.aggregate, 90);
+  const aggPct = data.loading ? 0 : trendPercentChange(data.aggregate);
   const aggTrend = aggPct > 5 ? "up" : aggPct < -5 ? "down" : "flat";
   const aggBreakout = data.loading ? null : breakoutInfo(data.aggregate);
 
@@ -95,7 +95,7 @@ function Dashboard() {
               <StatCard
                 label="90-day trend"
                 value={<TrendArrow trend={aggTrend} pct={aggPct} />}
-                sub="Rolling 90-day avg"
+                sub="Rolling 3-month comparison"
               />
               <StatCard
                 label="Platforms"
@@ -286,7 +286,7 @@ function Dashboard() {
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {data.platforms.map((p) => {
-                const pct = trendPercentChange(p.raw, 90);
+                const pct = trendPercentChange(p.raw);
                 const pBI = breakoutInfo(p.series);
                 return (
                   <Link
@@ -308,7 +308,7 @@ function Dashboard() {
                     </div>
                     <div className="mt-2 flex items-center gap-3 text-xs">
                       <StatusPill status={p.status} pct={pBI?.pct} />
-                      <TrendArrow trend={p.trend} pct={pct} label="90d" />
+                      <TrendArrow trend={p.trend} pct={pct} label="3M" />
                     </div>
                     {/* Show boundary if in breakout */}
                     {pBI && (

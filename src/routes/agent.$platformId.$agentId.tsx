@@ -50,7 +50,7 @@ function AgentPage() {
     return agent.series.slice(-265); // ~22 working days x 12 months
   }, [agent]);
 
-  const pct = agent ? trendPercentChange(agent.raw, 90) : 0;
+  const pct = agent ? trendPercentChange(agent.raw) : 0;
 
   return (
     <div className="min-h-screen bg-surface">
@@ -83,7 +83,7 @@ function AgentPage() {
               <StatCard
                 label="90-day trend"
                 value={<TrendArrow trend={agent.trend} pct={pct} />}
-                sub="Rolling 90-day average"
+                sub="Rolling 3-month comparison"
               />
             </div>
 
