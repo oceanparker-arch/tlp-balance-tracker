@@ -145,37 +145,85 @@ export function computeBollinger(data: DataPoint[]): BollingerPoint[] {
 export type TrendDirection = "up" | "down" | "flat";
 
 // ── Calendar-period trend calculation ─────────────────────────────────────────
-// Compares the rolling 30-day average balance (working days only, balance > 0)
-// ending today against the equivalent 30-day period ending 3 months prior.
-// This avoids WD matching issues, bank holiday edge cases, and near-zero pollution.
+// Anchor: second Wednesday of the current month — never a bank holiday,
+// always a working day. This gives a consistent, reliable anchor point.
+//
+// For each period (current and prior, 3 months apart):
+//   1. Take all working-day balances (balance > 0) in the rolling calendar
+//      month ending on the anchor date
+//   2. Sort descending
+//   3. Strip the top 5 (removes WD1-3 rental income spikes + any outliers)
+//   4. Take the next 10 values as the dataset
+//   5. Average those 10
+//
+// This gives a stable mid-range balance figure that is immune to:
+//   - Start-of-month rental income spikes
+//   - Bank holidays and weekend gaps
+//   - Near-zero end-of-month lows
+//   - Varying number of working days per month
+// Always divides by 10 so the denominator is consistent.
 
-function periodAverage(data: DataPoint[], endDate: string, days = 30): number {
-  // Work backwards from endDate, collect up to `days` working-day data points
-  // with balance > 0
-  const end = new Date(endDate);
-  const points = data
-    .filter(d => {
-      const dt = new Date(d.date);
-      return dt <= end && d.balance > 0;
-    })
-    .slice(-days);
-  if (!points.length) return 0;
-  return points.reduce((s, d) => s + d.balance, 0) / points.length;
+function getSecondWednesday(year: number, month: number): string {
+  // month is 0-indexed (JS Date)
+  let count = 0;
+  for (let day = 1; day <= 14; day++) {
+    const d = new Date(year, month, day);
+    if (d.getDay() === 3) { // Wednesday = 3
+      count++;
+      if (count === 2) {
+        return d.toISOString().slice(0, 10);
+      }
+    }
+  }
+  return new Date(year, month, 14).toISOString().slice(0, 10);
 }
 
-function threeMonthsBack(dateStr: string): string {
+function stableAverage(data: DataPoint[], endDate: string, startDate: string): number {
+  const points = data
+    .filter(d => d.date >= startDate && d.date <= endDate && d.balance > 0)
+    .map(d => d.balance)
+    .sort((a, b) => b - a); // descending
+
+  if (points.length < 6) return 0; // need at least 6 to strip 5 and have 1 left
+
+  // Strip top 5, take next 10
+  const dataset = points.slice(5, 15);
+  if (!dataset.length) return 0;
+  return dataset.reduce((s, v) => s + v, 0) / dataset.length;
+}
+
+function subtractOneMonth(dateStr: string): string {
+  const d = new Date(dateStr);
+  d.setMonth(d.getMonth() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function subtractThreeMonths(dateStr: string): string {
   const d = new Date(dateStr);
   d.setMonth(d.getMonth() - 3);
   return d.toISOString().slice(0, 10);
 }
 
 export function trendPercentChange(data: DataPoint[]): number {
-  if (data.length < 2) return 0;
-  const latest    = data[data.length - 1].date;
-  const priorDate = threeMonthsBack(latest);
-  const current   = periodAverage(data, latest, 30);
-  const prior     = periodAverage(data, priorDate, 30);
-  if (!prior) return 0;
+  if (data.length < 15) return 0;
+
+  const latest = data[data.length - 1].date;
+  const latestDate = new Date(latest);
+
+  // Current period anchor: second Wednesday of current month
+  const currentAnchor = getSecondWednesday(latestDate.getFullYear(), latestDate.getMonth());
+  const currentStart  = subtractOneMonth(currentAnchor);
+
+  // Prior period anchor: second Wednesday of month 3 months ago
+  const priorAnchorDate = new Date(currentAnchor);
+  priorAnchorDate.setMonth(priorAnchorDate.getMonth() - 3);
+  const priorAnchor = getSecondWednesday(priorAnchorDate.getFullYear(), priorAnchorDate.getMonth());
+  const priorStart  = subtractOneMonth(priorAnchor);
+
+  const current = stableAverage(data, currentAnchor, currentStart);
+  const prior   = stableAverage(data, priorAnchor, priorStart);
+
+  if (!prior || !current) return 0;
   return ((current - prior) / prior) * 100;
 }
 
