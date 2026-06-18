@@ -1,3 +1,4 @@
+import React from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useDashboardData } from "@/data/useDashboardData";
 import { TopNav } from "@/components/TopNav";
@@ -35,6 +36,9 @@ function StatCard({ label, value, sub }: { label: string; value: React.ReactNode
 function Dashboard() {
   const data = useDashboardData();
   // Trend alerts: trending down only, sorted by steepest % drop
+  const [showAllBreakouts, setShowAllBreakouts] = React.useState(false);
+  const [showAllTrends, setShowAllTrends] = React.useState(false);
+
   const trendAlerts = data.loading
     ? []
     : data.agents
@@ -146,7 +150,7 @@ function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedBreakouts.slice(0, 10).map((a) => (
+                  {(showAllBreakouts ? sortedBreakouts : sortedBreakouts.slice(0, 10)).map((a) => (
                     <tr
                       key={`${a.platformId}-${a.agentId}`}
                       className="border-t border-border"
@@ -184,7 +188,9 @@ function Dashboard() {
               </table>
               {sortedBreakouts.length > 10 && (
                 <div className="border-t border-border bg-secondary px-4 py-2 text-right text-xs">
-                  <a href="#" className="font-medium hover:underline" style={{ color: "var(--teal)" }}>View all →</a>
+                  <button onClick={() => setShowAllBreakouts(s => !s)} className="font-medium hover:underline" style={{ color: "var(--teal)" }}>
+                    {showAllBreakouts ? "Show less ↑" : `View all ${sortedBreakouts.length} →`}
+                  </button>
                 </div>
               )}
             </div>
@@ -229,7 +235,7 @@ function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {trendAlerts.slice(0, 10).map((a) => (
+                  {(showAllTrends ? trendAlerts : trendAlerts.slice(0, 10)).map((a) => (
                     <tr
                       key={`${a.platformId}-${a.agentId}`}
                       className="border-t border-border"
@@ -261,7 +267,9 @@ function Dashboard() {
               </table>
               {trendAlerts.length > 10 && (
                 <div className="border-t border-border bg-secondary px-4 py-2 text-right text-xs">
-                  <a href="#" className="font-medium hover:underline" style={{ color: "var(--teal)" }}>View all →</a>
+                  <button onClick={() => setShowAllTrends(s => !s)} className="font-medium hover:underline" style={{ color: "var(--teal)" }}>
+                    {showAllTrends ? "Show less ↑" : `View all ${trendAlerts.length} →`}
+                  </button>
                 </div>
               )}
             </div>

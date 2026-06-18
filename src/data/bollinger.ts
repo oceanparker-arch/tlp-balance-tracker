@@ -59,10 +59,15 @@ function rollingBollingerStats(
   const variance = vals.reduce((s, v) => s + (v - mean) ** 2, 0) / (vals.length - 1);
   const std = Math.sqrt(variance);
 
+  // Floor the lower band at 20% of mean — but only when mean >= £5,000.
+  // Below £5k, zero is a normal operating state so bands fall naturally.
+  // Above £5k, a lower band of £0 would be misleading.
+  const rawLower = mean - 2 * std;
+  const floor    = mean >= 5000 ? mean * 0.20 : 0;
   return {
     mean,
     upper: mean + 2 * std,
-    lower: Math.max(0, mean - 2 * std),
+    lower: Math.max(rawLower, floor),
   };
 }
 
@@ -129,9 +134,9 @@ export function computeBollinger(data: DataPoint[]): BollingerPoint[] {
 
 export type TrendDirection = "up" | "down" | "flat";
 
-export function trendDirection(data: DataPoint[]): TrendDirection {
-  const slice = data.slice(-90);
-  if (slice.length < 2) return "flat";
+function regressionSlope(data: DataPoint[], windowDays = 365) {
+  const slice = data.slice(-windowDays);
+  if (slice.length < 2) return { slope: 0, intercept: slice[0]?.balance ?? 0, n: slice.length };
   const n = slice.length;
   let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
   for (let i = 0; i < n; i++) {
@@ -139,20 +144,23 @@ export function trendDirection(data: DataPoint[]): TrendDirection {
     sumXY += i * slice[i].balance; sumXX += i * i;
   }
   const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX || 1);
-  const avg = sumY / n;
-  const rel = avg ? (slope * 90) / avg : 0;
-  if (rel > 0.05) return "up";
-  if (rel < -0.05) return "down";
+  const intercept = (sumY - slope * sumX) / n;
+  return { slope, intercept, n };
+}
+
+export function trendDirection(data: DataPoint[]): TrendDirection {
+  const { slope, intercept, n } = regressionSlope(data, 365);
+  if (n < 2 || !intercept) return "flat";
+  const totalChange = (slope * (n - 1)) / intercept;
+  if (totalChange > 0.03) return "up";
+  if (totalChange < -0.03) return "down";
   return "flat";
 }
 
-export function trendPercentChange(data: DataPoint[], windowDays = 90) {
-  const slice = data.slice(-windowDays);
-  if (slice.length < 2) return 0;
-  const first = slice[0].balance;
-  const last = slice[slice.length - 1].balance;
-  if (!first) return 0;
-  return ((last - first) / first) * 100;
+export function trendPercentChange(data: DataPoint[], windowDays = 365) {
+  const { slope, intercept, n } = regressionSlope(data, windowDays);
+  if (n < 2 || !intercept) return 0;
+  return ((slope * (n - 1)) / Math.abs(intercept)) * 100;
 }
 
 export function todayStatus(data: BollingerPoint[]): {
