@@ -28,7 +28,7 @@ function StatCard({ label, value, sub }: { label: string; value: React.ReactNode
 function AgentPage() {
   const { platformId, agentId } = useParams({ from: "/agent/$platformId/$agentId" });
   const data = useDashboardData();
-  const [view, setView] = useState<"all" | "3months" | "month">("3months");
+  const [view, setView] = useState<"all" | "12months" | "3months" | "month">("12months");
   const [showRaw, setShowRaw] = useState(false);
 
   const agent = data.agents.find((a) => a.platformId === platformId && a.agentId === agentId);
@@ -43,6 +43,11 @@ function AgentPage() {
   const threeMonthSeries = useMemo(() => {
     if (!agent) return [];
     return agent.series.slice(-66); // ~22 working days x 3 months
+  }, [agent]);
+
+  const twelveMonthSeries = useMemo(() => {
+    if (!agent) return [];
+    return agent.series.slice(-265); // ~22 working days x 12 months
   }, [agent]);
 
   const pct = agent ? trendPercentChange(agent.raw, 90) : 0;
@@ -88,8 +93,15 @@ function AgentPage() {
                 <div className="flex items-center gap-3">
                   <div className="inline-flex overflow-hidden rounded-md border border-border text-xs">
                     <button
+                      onClick={() => setView("12months")}
+                      className={`px-3 py-1.5 ${view === "12months" ? "text-white" : "text-text-secondary"}`}
+                      style={{ background: view === "12months" ? "var(--navy)" : "white" }}
+                    >
+                      12 months
+                    </button>
+                    <button
                       onClick={() => setView("3months")}
-                      className={`px-3 py-1.5 ${view === "3months" ? "text-white" : "text-text-secondary"}`}
+                      className={`border-l border-border px-3 py-1.5 ${view === "3months" ? "text-white" : "text-text-secondary"}`}
                       style={{ background: view === "3months" ? "var(--navy)" : "white" }}
                     >
                       3 months
@@ -113,7 +125,7 @@ function AgentPage() {
               </div>
               <div className="mb-3"><ChartLegend /></div>
               <BollingerChart
-                data={view === "all" ? agent.series : view === "3months" ? threeMonthSeries : monthSeries}
+                data={view === "all" ? agent.series : view === "12months" ? twelveMonthSeries : view === "3months" ? threeMonthSeries : monthSeries}
                 height={360}
                 showWdAxis={view === "month"}
                 agentName={agent.agentName}
