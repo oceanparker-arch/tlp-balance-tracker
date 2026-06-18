@@ -155,8 +155,8 @@ export function trendDirection(data: DataPoint[]): TrendDirection {
   const { slope, intercept, n } = regressionSlope(data, 365);
   if (n < 2 || !intercept) return "flat";
   const totalChange = (slope * (n - 1)) / intercept;
-  if (totalChange > 0.06) return "up";   // 2x threshold for upward trend
-  if (totalChange < -0.03) return "down"; // standard threshold for downward trend
+  if (totalChange > 0.03) return "up";
+  if (totalChange < -0.03) return "down";
   return "flat";
 }
 
