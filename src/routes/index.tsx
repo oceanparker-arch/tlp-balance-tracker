@@ -38,6 +38,7 @@ function Dashboard() {
   // Trend alerts: trending down only, sorted by steepest % drop
   const [showAllBreakouts, setShowAllBreakouts] = React.useState(false);
   const [showAllTrends, setShowAllTrends] = React.useState(false);
+  const [showAllTrendUp, setShowAllTrendUp] = React.useState(false);
 
   const trendAlerts = data.loading
     ? []
@@ -46,6 +47,14 @@ function Dashboard() {
         .map((a) => ({ ...a, trendPct: trendPercentChange(a.raw) }))
         .filter((a) => a.trendPct <= -15)
         .sort((a, b) => a.trendPct - b.trendPct); // most negative first
+
+  const trendUpAlerts = data.loading
+    ? []
+    : data.agents
+        .filter((a) => a.trend === "up" && a.latest.mean >= 25000)
+        .map((a) => ({ ...a, trendPct: trendPercentChange(a.raw) }))
+        .filter((a) => a.trendPct >= 15)
+        .sort((a, b) => b.trendPct - a.trendPct); // biggest increase first
 
   // Breakout alerts sorted by biggest % outside band
   const sortedBreakouts = data.loading
@@ -277,7 +286,87 @@ function Dashboard() {
           )}
         </section>
 
-        {/* Section 4: Platform overview */}
+        {/* Section 4: Trend Up Alerts */}
+        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+          <div className="mb-4 flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-text-primary">Trending Up (3 months)</h2>
+            <span
+              className="inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-xs font-semibold text-white"
+              style={{ background: "#27AE60" }}
+            >
+              {data.loading ? "…" : trendUpAlerts.length}
+            </span>
+          </div>
+          {data.loading ? (
+            <div className="animate-pulse rounded-md bg-muted h-32" />
+          ) : trendUpAlerts.length === 0 ? (
+            <div
+              className="rounded-md border px-4 py-6 text-sm"
+              style={{ background: "rgba(39,174,96,0.08)", borderColor: "rgba(39,174,96,0.25)", color: "#1d8049" }}
+            >
+              ✓ No accounts showing a significant upward trend over the last 3 months.
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-md border border-border">
+              <table className="w-full table-fixed text-sm">
+                <colgroup>
+                  <col className="w-[30%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[25%]" />
+                  <col className="w-[25%]" />
+                </colgroup>
+                <thead className="bg-secondary text-left text-xs uppercase tracking-wide text-text-secondary">
+                  <tr>
+                    <th className="px-4 py-2.5">Agent</th>
+                    <th className="px-4 py-2.5">Platform</th>
+                    <th className="px-4 py-2.5 text-right">Closing balance</th>
+                    <th className="px-4 py-2.5">3-month trend</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(showAllTrendUp ? trendUpAlerts : trendUpAlerts.slice(0, 10)).map((a) => (
+                    <tr
+                      key={`${a.platformId}-${a.agentId}`}
+                      className="border-t border-border"
+                      style={{ borderLeft: "3px solid #27AE60" }}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to="/agent/$platformId/$agentId"
+                            params={{ platformId: a.platformId, agentId: a.agentId }}
+                            className="font-semibold hover:underline truncate"
+                            style={{ color: "var(--teal)" }}
+                          >
+                            {a.agentName}
+                          </Link>
+                          {a.isLive && <LiveBadge />}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3"><PlatformBadge name={a.platformName} /></td>
+                      <td className="px-4 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-semibold" style={{ color: "#27AE60" }}>
+                          ↗ {Math.abs(a.trendPct).toFixed(1)}%
+                        </span>
+                        <span className="text-xs text-text-secondary ml-1">(3M)</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {trendUpAlerts.length > 10 && (
+                <div className="border-t border-border bg-secondary px-4 py-2 text-right text-xs">
+                  <button onClick={() => setShowAllTrendUp(s => !s)} className="font-medium hover:underline" style={{ color: "var(--teal)" }}>
+                    {showAllTrendUp ? "Show less ↑" : `View all ${trendUpAlerts.length} →`}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* Section 5: Platform overview */}
         <section>
           <h2 className="mb-4 text-lg font-semibold text-text-primary">Platform Overview</h2>
           {data.loading ? (

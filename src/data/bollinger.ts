@@ -229,8 +229,8 @@ export function trendPercentChange(data: DataPoint[]): number {
 
 export function trendDirection(data: DataPoint[]): TrendDirection {
   const pct = trendPercentChange(data);
-  if (pct > 3) return "up";
-  if (pct < -15) return "down"; // only flag as down if 15%+ drop
+  if (pct >= 15) return "up";   // only flag as up if 15%+ increase
+  if (pct <= -15) return "down"; // only flag as down if 15%+ drop
   return "flat";
 }
 
