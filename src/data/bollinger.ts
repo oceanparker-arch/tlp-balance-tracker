@@ -62,14 +62,16 @@ function rollingBollingerStats(
   // Floor the lower band at 20% of mean — but only when mean >= £5,000.
   // Below £5k, zero is a normal operating state so bands fall naturally.
   // Above £5k, a lower band of £0 would be misleading.
-  // Using ±1.5σ instead of ±2σ for tighter, more meaningful bands.
-  // ±2σ was producing lower bands that were unrealistically low for
-  // agents with occasional outlier months.
+  // Asymmetric bands:
+  // Upper = mean + 2σ  (wider — harder to trigger above-band breakout)
+  // Lower = mean - 1.5σ (tighter — easier to catch a below-band drop)
+  // Floor at 20% of mean for agents with mean >= £5,000 to prevent
+  // collapse to zero where it would be meaningless.
   const rawLower = mean - 1.5 * std;
   const floor    = mean >= 5000 ? mean * 0.20 : 0;
   return {
     mean,
-    upper: mean + 1.5 * std,
+    upper: mean + 2 * std,
     lower: Math.max(rawLower, floor),
   };
 }
