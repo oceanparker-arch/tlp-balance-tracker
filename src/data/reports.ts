@@ -101,7 +101,8 @@ export function createReport(report: Omit<InvestigationReport, "id" | "ref">): I
   const reports = getReports();
   const year = new Date().getFullYear();
   const seq  = (reports.filter(r => r.ref.startsWith(`INC-${year}`)).length + 1).toString().padStart(4, "0");
-  const full: InvestigationReport = { ...report, id: crypto.randomUUID(), ref: `INC-${year}-${seq}` };
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const full: InvestigationReport = { ...report, id, ref: `INC-${year}-${seq}` };
   reports.unshift(full);
   saveReports(reports);
   return full;
