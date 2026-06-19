@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 
 export function TopNav({
   lastUpdated,
@@ -8,6 +9,27 @@ export function TopNav({
   lastUpdated: Date;
   usingLiveData?: boolean;
 }) {
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    setRefreshMsg(null);
+    try {
+      const res = await fetch("http://localhost:5000/api/refresh", { method: "POST" });
+      if (res.ok) {
+        setRefreshMsg("✓ Data refreshed");
+        setTimeout(() => { setRefreshMsg(null); window.location.reload(); }, 1500);
+      } else {
+        setRefreshMsg("Refresh failed");
+      }
+    } catch {
+      setRefreshMsg("Server not reachable");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   return (
     <header className="sticky top-0 z-10 border-b border-border" style={{ background: "var(--navy)" }}>
       <div className="mx-auto flex h-14 max-w-[1400px] items-center px-6">
@@ -40,6 +62,24 @@ export function TopNav({
         </nav>
 
         <div className="ml-auto flex items-center gap-4">
+          {/* Refresh button */}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded border transition"
+            style={{
+              borderColor: "rgba(255,255,255,0.25)",
+              color: refreshMsg?.startsWith("✓") ? "#82E0AA" : "rgba(255,255,255,0.7)",
+              background: "transparent",
+              cursor: refreshing ? "not-allowed" : "pointer",
+              opacity: refreshing ? 0.6 : 1,
+            }}
+            title="Refresh data from S: drive"
+          >
+            <span style={{ display: "inline-block", animation: refreshing ? "spin 1s linear infinite" : "none", fontSize: 13 }}>↻</span>
+            {refreshMsg ?? (refreshing ? "Refreshing…" : "Refresh data")}
+          </button>
+
           {/* Live data indicator */}
           <div className="flex items-center gap-1.5 text-xs">
             <span
@@ -60,6 +100,8 @@ export function TopNav({
           </div>
         </div>
       </div>
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </header>
   );
 }
