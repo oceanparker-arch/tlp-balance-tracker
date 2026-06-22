@@ -8,6 +8,10 @@ import { PlatformBadge, StatusPill, TrendArrow } from "@/components/StatusPill";
 import { LiveBadge } from "@/components/LiveBadge";
 import { formatGBP } from "@/lib/format";
 import { trendPercentChange, breakoutInfo } from "@/data/bollinger";
+import {
+  HIGH_REASONS, LOW_REASONS, getJoEntries, saveJoEntries, escalateToCarl,
+  type JoEntry,
+} from "@/data/reportingData";
 
 export const Route = createFileRoute("/")(({
   head: () => ({
@@ -37,6 +41,73 @@ function Dashboard() {
   const data = useDashboardData();
   // Trend alerts: trending down only, sorted by steepest % drop
   const [showAllBreakouts, setShowAllBreakouts] = React.useState(false);
+  const [reviewOpen, setReviewOpen] = React.useState<string | null>(null); // agentId being reviewed
+  const [joEntries, setJoEntries] = React.useState<Record<string, JoEntry>>({});
+  const today = new Date().toISOString().slice(0, 10);
+
+  React.useEffect(() => {
+    const existing = getJoEntries();
+    const map: Record<string, JoEntry> = {};
+    for (const e of existing) map[e.id] = e;
+    setJoEntries(map);
+  }, []);
+
+  function getEntryId(a: typeof sortedBreakouts[0]) {
+    return `jo-${today}-${a.platformId}-${a.agentId}-band`;
+  }
+
+  function updateEntry(id: string, field: string, value: string) {
+    setJoEntries(prev => {
+      const entry = prev[id] ?? {
+        id, date: today,
+        agentId: "", agentName: "", platformId: "", platformName: "",
+        alertType: "below_band" as const,
+        balance: 0, variancePct: 0,
+        reason: "", notes: "", action: "", passedToCarl: false,
+      };
+      return { ...prev, [id]: { ...entry, [field]: value } };
+    });
+  }
+
+  function handleNoAction(a: typeof sortedBreakouts[0]) {
+    const id = getEntryId(a);
+    const entry: JoEntry = {
+      id, date: today,
+      agentId: a.agentId, agentName: a.agentName,
+      platformId: a.platformId, platformName: a.platformName,
+      alertType: a.status === "above" ? "above_band" : "below_band",
+      balance: a.latest.balance, variancePct: a.breakoutPct ?? 0,
+      reason: joEntries[id]?.reason ?? "",
+      notes: joEntries[id]?.notes ?? "",
+      action: "no_action", passedToCarl: false,
+    };
+    const updated = { ...joEntries, [id]: entry };
+    setJoEntries(updated);
+    const existing = getJoEntries().filter(e => e.id !== id);
+    saveJoEntries([...existing, entry]);
+    setReviewOpen(null);
+  }
+
+  function handleEscalate(a: typeof sortedBreakouts[0]) {
+    const id = getEntryId(a);
+    const entry: JoEntry = {
+      id, date: today,
+      agentId: a.agentId, agentName: a.agentName,
+      platformId: a.platformId, platformName: a.platformName,
+      alertType: a.status === "above" ? "above_band" : "below_band",
+      balance: a.latest.balance, variancePct: a.breakoutPct ?? 0,
+      reason: joEntries[id]?.reason ?? "",
+      notes: joEntries[id]?.notes ?? "",
+      action: "escalate_carl", passedToCarl: true,
+      passedToCarlAt: new Date().toISOString(),
+    };
+    const updated = { ...joEntries, [id]: entry };
+    setJoEntries(updated);
+    const existing = getJoEntries().filter(e => e.id !== id);
+    saveJoEntries([...existing, entry]);
+    escalateToCarl(entry);
+    setReviewOpen(null);
+  }
   const [showAllTrends, setShowAllTrends] = React.useState(false);
   const [showAllTrendUp, setShowAllTrendUp] = React.useState(false);
 
@@ -148,11 +219,11 @@ function Dashboard() {
             <div className="overflow-hidden rounded-md border border-border">
               <table className="w-full table-fixed text-sm">
                 <colgroup>
-                  <col className="w-[28%]" />
-                  <col className="w-[16%]" />
-                  <col className="w-[20%]" />
-                  <col className="w-[20%]" />
-                  <col className="w-[16%]" />
+                  <col className="w-[26%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[23%]" />
                 </colgroup>
                 <thead className="bg-secondary text-left text-xs uppercase tracking-wide text-text-secondary">
                   <tr>
@@ -160,44 +231,109 @@ function Dashboard() {
                     <th className="px-4 py-2.5">Platform</th>
                     <th className="px-4 py-2.5 text-right">Closing balance</th>
                     <th className="px-4 py-2.5">Breakout</th>
-                    <th className="px-4 py-2.5 text-right">Band boundary</th>
+                    <th className="px-4 py-2.5 text-right">Review</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(showAllBreakouts ? sortedBreakouts : sortedBreakouts.slice(0, 10)).map((a) => (
-                    <tr
-                      key={`${a.platformId}-${a.agentId}`}
-                      className="border-t border-border"
-                      style={{ borderLeft: "3px solid var(--tlp-red)" }}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            to="/agent/$platformId/$agentId"
-                            params={{ platformId: a.platformId, agentId: a.agentId }}
-                            className="font-semibold hover:underline truncate"
-                            style={{ color: "var(--teal)" }}
-                          >
-                            {a.agentName}
-                          </Link>
-                          {a.isLive && <LiveBadge />}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3"><PlatformBadge name={a.platformName} /></td>
-                      <td className="px-4 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
-                      <td className="px-4 py-3">
-                        <StatusPill status={a.status} pct={a.breakoutPct ?? undefined} />
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-text-secondary text-xs">
-                        {a.breakoutBoundary != null ? (
-                          <div>
-                            <div className="text-[10px] text-text-secondary">{a.breakoutBoundaryLabel}</div>
-                            <div className="font-medium text-text-primary">{formatGBP(a.breakoutBoundary)}</div>
-                          </div>
-                        ) : "—"}
-                      </td>
-                    </tr>
-                  ))}
+                  {(showAllBreakouts ? sortedBreakouts : sortedBreakouts.slice(0, 10)).map((a) => {
+                    const entryId = getEntryId(a);
+                    const entry = joEntries[entryId];
+                    const isOpen = reviewOpen === entryId;
+                    const isDone = entry?.action !== "" && entry?.action != null;
+                    const isHigh = a.status === "above";
+                    const reasons = isHigh ? HIGH_REASONS : LOW_REASONS;
+                    const showNotes = entry?.reason === "Other" || entry?.reason === "Potential fraud";
+                    return (
+                      <React.Fragment key={`${a.platformId}-${a.agentId}`}>
+                        <tr
+                          className="border-t border-border"
+                          style={{ borderLeft: `3px solid ${isDone ? entry.action === "no_action" ? "#27AE60" : "#2E7D8A" : "var(--tlp-red)"}` }}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <Link
+                                to="/agent/$platformId/$agentId"
+                                params={{ platformId: a.platformId, agentId: a.agentId }}
+                                className="font-semibold hover:underline truncate"
+                                style={{ color: "var(--teal)" }}
+                              >
+                                {a.agentName}
+                              </Link>
+                              {a.isLive && <LiveBadge />}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3"><PlatformBadge name={a.platformName} /></td>
+                          <td className="px-4 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
+                          <td className="px-4 py-3">
+                            <StatusPill status={a.status} pct={a.breakoutPct ?? undefined} />
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {isDone ? (
+                              <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, fontWeight: 500, background: entry.action === "no_action" ? "rgba(39,174,96,0.12)" : "rgba(46,125,138,0.12)", color: entry.action === "no_action" ? "#1E8449" : "#2E7D8A" }}>
+                                {entry.action === "no_action" ? "No action" : "→ Carl"}
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => setReviewOpen(isOpen ? null : entryId)}
+                                className="text-xs px-3 py-1 rounded border border-border hover:bg-secondary transition font-medium"
+                                style={{ color: "var(--teal)" }}
+                              >
+                                {isOpen ? "Cancel" : "Review"}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                        {isOpen && (
+                          <tr className="border-t border-border" style={{ background: "var(--color-background-secondary)" }}>
+                            <td colSpan={5} className="px-4 py-3">
+                              <div className="flex items-start gap-3 flex-wrap">
+                                <div style={{ minWidth: 200, flex: 1 }}>
+                                  <label className="text-xs font-medium text-text-secondary mb-1 block">Reason</label>
+                                  <select
+                                    value={entry?.reason ?? ""}
+                                    onChange={e => updateEntry(entryId, "reason", e.target.value)}
+                                    className="w-full border border-border rounded px-2 py-1.5 text-sm bg-card text-text-primary"
+                                  >
+                                    <option value="">Select reason…</option>
+                                    {reasons.map(r => <option key={r} value={r}>{r}</option>)}
+                                  </select>
+                                </div>
+                                {showNotes && (
+                                  <div style={{ minWidth: 240, flex: 2 }}>
+                                    <label className="text-xs font-medium text-text-secondary mb-1 block">Notes</label>
+                                    <input
+                                      type="text"
+                                      value={entry?.notes ?? ""}
+                                      onChange={e => updateEntry(entryId, "notes", e.target.value)}
+                                      placeholder="Add notes…"
+                                      className="w-full border border-border rounded px-2 py-1.5 text-sm bg-card text-text-primary"
+                                    />
+                                  </div>
+                                )}
+                                <div className="flex items-end gap-2 mt-5">
+                                  <button
+                                    onClick={() => handleEscalate(a)}
+                                    disabled={!entry?.reason || (showNotes && !entry?.notes?.trim())}
+                                    className="text-xs px-3 py-1.5 rounded text-white font-medium disabled:opacity-40"
+                                    style={{ background: "#1B2E4B" }}
+                                  >
+                                    Escalate to Carl
+                                  </button>
+                                  <button
+                                    onClick={() => handleNoAction(a)}
+                                    disabled={!entry?.reason}
+                                    className="text-xs px-3 py-1.5 rounded border border-border hover:bg-secondary transition disabled:opacity-40"
+                                  >
+                                    No action required
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
               {sortedBreakouts.length > 10 && (
