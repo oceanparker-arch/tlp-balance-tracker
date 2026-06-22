@@ -13,62 +13,6 @@ import { HIGH_REASONS, LOW_REASONS, getJoEntries, saveJoEntries, escalateToCarl,
 
 
 
-function ReviewPanel({ entryId, alertType, existingEntry, onEscalate, onNoAction }: ReviewPanelProps) {
-  const isHigh = alertType === "above_band" || alertType === "trend_up";
-  const reasons = isHigh ? HIGH_REASONS : LOW_REASONS;
-  const [reason, setReason] = React.useState(existingEntry?.reason ?? "");
-  const [notes, setNotes]   = React.useState(existingEntry?.notes ?? "");
-  const showNotes = reason === "Other" || reason === "Potential fraud";
-
-  return (
-    <div className="px-5 py-4 flex flex-col gap-3" style={{ background: "var(--color-background-secondary)" }}>
-      <div className="flex items-start gap-4 flex-wrap">
-        <div style={{ minWidth: 200, flex: 1 }}>
-          <label className="text-xs font-medium text-text-secondary mb-1 block">Reason</label>
-          <select
-            value={reason}
-            onChange={e => setReason(e.target.value)}
-            className="w-full border border-border rounded px-2 py-1.5 text-sm bg-card text-text-primary"
-          >
-            <option value="">Select reason…</option>
-            {reasons.map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
-        </div>
-        {showNotes && (
-          <div style={{ minWidth: 240, flex: 2 }}>
-            <label className="text-xs font-medium text-text-secondary mb-1 block">Notes</label>
-            <input
-              type="text"
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Add notes…"
-              className="w-full border border-border rounded px-2 py-1.5 text-sm bg-card text-text-primary"
-              autoFocus
-            />
-          </div>
-        )}
-        {reason && (
-          <div className="flex items-end gap-2 mt-5">
-            <button
-              onClick={() => onEscalate(reason, notes)}
-              disabled={showNotes && !notes.trim()}
-              className="text-xs px-3 py-1.5 rounded text-white font-medium disabled:opacity-40"
-              style={{ background: "#1B2E4B" }}
-            >
-              Escalate to Carl
-            </button>
-            <button
-              onClick={() => onNoAction(reason)}
-              className="text-xs px-3 py-1.5 rounded border border-border hover:bg-secondary transition"
-            >
-              No action required
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 
 // ── Review Modal ─────────────────────────────────────────────────────────────
@@ -213,7 +157,7 @@ function Dashboard() {
   // Trend alerts: trending down only, sorted by steepest % drop
   const [showAllBreakouts, setShowAllBreakouts] = React.useState(false);
   const [reviewingAgentId, setReviewingAgentId] = React.useState<string | null>(null);
-  const reviewingAgentRef = React.useRef<typeof sortedBreakouts[0] | null>(null);
+  const reviewingAgentRef = React.useRef<any>(null);
   const [doneIds, setDoneIds] = React.useState<Record<string, "no_action" | "escalate_carl">>(() => {
     const existing = getJoEntries();
     const map: Record<string, "no_action" | "escalate_carl"> = {};
