@@ -8,20 +8,8 @@ import { PlatformBadge, StatusPill, TrendArrow } from "@/components/StatusPill";
 import { LiveBadge } from "@/components/LiveBadge";
 import { formatGBP } from "@/lib/format";
 import { trendPercentChange, breakoutInfo } from "@/data/bollinger";
-import {
-  HIGH_REASONS, LOW_REASONS, getJoEntries, saveJoEntries, escalateToCarl,
-  type JoEntry,
-} from "@/data/reportingData";
 
 
-// ── Self-contained review panel — isolated to prevent full page re-renders ──
-interface ReviewPanelProps {
-  entryId: string;
-  alertType: "above_band" | "below_band" | "trend_down" | "trend_up";
-  existingEntry?: JoEntry;
-  onEscalate: (reason: string, notes: string) => void;
-  onNoAction: (reason: string) => void;
-}
 
 function ReviewPanel({ entryId, alertType, existingEntry, onEscalate, onNoAction }: ReviewPanelProps) {
   const isHigh = alertType === "above_band" || alertType === "trend_up";
@@ -108,54 +96,7 @@ function Dashboard() {
   const data = useDashboardData();
   // Trend alerts: trending down only, sorted by steepest % drop
   const [showAllBreakouts, setShowAllBreakouts] = React.useState(false);
-  const [reviewOpen, setReviewOpen] = React.useState<string | null>(null);
-  const [doneEntries, setDoneEntries] = React.useState<Record<string, JoEntry>>({});
-  const today = new Date().toISOString().slice(0, 10);
 
-  React.useEffect(() => {
-    const existing = getJoEntries();
-    const map: Record<string, JoEntry> = {};
-    for (const e of existing) map[e.id] = e;
-    setDoneEntries(map);
-  }, []);
-
-  function getEntryId(a: typeof sortedBreakouts[0]) {
-    return `jo-${today}-${a.platformId}-${a.agentId}-band`;
-  }
-
-  function handleNoAction(a: typeof sortedBreakouts[0], reason: string) {
-    const id = getEntryId(a);
-    const entry: JoEntry = {
-      id, date: today,
-      agentId: a.agentId, agentName: a.agentName,
-      platformId: a.platformId, platformName: a.platformName,
-      alertType: a.status === "above" ? "above_band" : "below_band",
-      balance: a.latest.balance, variancePct: a.breakoutPct ?? 0,
-      reason, notes: "", action: "no_action", passedToCarl: false,
-    };
-    setDoneEntries(prev => ({ ...prev, [id]: entry }));
-    const existing = getJoEntries().filter(e => e.id !== id);
-    saveJoEntries([...existing, entry]);
-    setReviewOpen(null);
-  }
-
-  function handleEscalate(a: typeof sortedBreakouts[0], reason: string, notes: string) {
-    const id = getEntryId(a);
-    const entry: JoEntry = {
-      id, date: today,
-      agentId: a.agentId, agentName: a.agentName,
-      platformId: a.platformId, platformName: a.platformName,
-      alertType: a.status === "above" ? "above_band" : "below_band",
-      balance: a.latest.balance, variancePct: a.breakoutPct ?? 0,
-      reason, notes, action: "escalate_carl", passedToCarl: true,
-      passedToCarlAt: new Date().toISOString(),
-    };
-    setDoneEntries(prev => ({ ...prev, [id]: entry }));
-    const existing = getJoEntries().filter(e => e.id !== id);
-    saveJoEntries([...existing, entry]);
-    escalateToCarl(entry);
-    setReviewOpen(null);
-  }
   const [showAllTrends, setShowAllTrends] = React.useState(false);
   const [showAllTrendUp, setShowAllTrendUp] = React.useState(false);
 
@@ -285,76 +226,49 @@ function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(showAllBreakouts ? sortedBreakouts : sortedBreakouts.slice(0, 10)).map((a) => {
-                    const entryId = getEntryId(a);
-                    const entry = doneEntries[entryId];
-                    const isOpen = reviewOpen === entryId;
-                    const isDone = entry?.action !== "" && entry?.action != null;
-                    return (
-                      <React.Fragment key={`${a.platformId}-${a.agentId}`}>
-                        <tr
-                          className="border-t border-border"
-                          style={{ borderLeft: `3px solid ${isDone ? entry.action === "no_action" ? "#27AE60" : "#2E7D8A" : "var(--tlp-red)"}` }}
+                  {(showAllBreakouts ? sortedBreakouts : sortedBreakouts.slice(0, 10)).map((a) => (
+                    <tr
+                      key={`${a.platformId}-${a.agentId}`}
+                      className="border-t border-border"
+                      style={{ borderLeft: "3px solid var(--tlp-red)" }}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to="/agent/$platformId/$agentId"
+                            params={{ platformId: a.platformId, agentId: a.agentId }}
+                            className="font-semibold hover:underline truncate"
+                            style={{ color: "var(--teal)" }}
+                          >
+                            {a.agentName}
+                          </Link>
+                          {a.isLive && <LiveBadge />}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3"><PlatformBadge name={a.platformName} /></td>
+                      <td className="px-4 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-text-secondary">
+                        {a.breakoutBoundary != null ? (
+                          <>
+                            <span className="text-[11px] uppercase tracking-wide mr-1">{a.breakoutBoundaryLabel}:</span>
+                            {formatGBP(a.breakoutBoundary)}
+                          </>
+                        ) : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusPill status={a.status} pct={a.breakoutPct ?? undefined} />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link
+                          to="/reports/jo"
+                          className="text-xs px-3 py-1 rounded border border-border hover:bg-secondary transition font-medium"
+                          style={{ color: "var(--teal)" }}
                         >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <Link
-                                to="/agent/$platformId/$agentId"
-                                params={{ platformId: a.platformId, agentId: a.agentId }}
-                                className="font-semibold hover:underline truncate"
-                                style={{ color: "var(--teal)" }}
-                              >
-                                {a.agentName}
-                              </Link>
-                              {a.isLive && <LiveBadge />}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3"><PlatformBadge name={a.platformName} /></td>
-                          <td className="px-4 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
-                          <td className="px-4 py-3 text-right tabular-nums text-text-secondary">
-                            {a.breakoutBoundary != null ? (
-                              <>
-                                <span className="text-[11px] uppercase tracking-wide mr-1">{a.breakoutBoundaryLabel}:</span>
-                                {formatGBP(a.breakoutBoundary)}
-                              </>
-                            ) : "—"}
-                          </td>
-                          <td className="px-4 py-3">
-                            <StatusPill status={a.status} pct={a.breakoutPct ?? undefined} />
-                          </td>
-
-                          <td className="px-4 py-3 text-right">
-                            {isDone ? (
-                              <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, fontWeight: 500, background: entry.action === "no_action" ? "rgba(39,174,96,0.12)" : "rgba(46,125,138,0.12)", color: entry.action === "no_action" ? "#1E8449" : "#2E7D8A" }}>
-                                {entry.action === "no_action" ? "No action" : "→ Carl"}
-                              </span>
-                            ) : (
-                              <button
-                                onClick={() => setReviewOpen(isOpen ? null : entryId)}
-                                className="text-xs px-3 py-1 rounded border border-border hover:bg-secondary transition font-medium"
-                                style={{ color: "var(--teal)" }}
-                              >
-                                {isOpen ? "Cancel" : "Review"}
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                        {isOpen && (
-                          <tr className="border-t border-border">
-                            <td colSpan={6} style={{ padding: 0 }}>
-                              <ReviewPanel
-                                entryId={entryId}
-                                alertType={a.status === "above" ? "above_band" : "below_band"}
-                                existingEntry={entry}
-                                onEscalate={(reason, notes) => handleEscalate(a, reason, notes)}
-                                onNoAction={(reason) => handleNoAction(a, reason)}
-                              />
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
+                          Review
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
               {sortedBreakouts.length > 10 && (
