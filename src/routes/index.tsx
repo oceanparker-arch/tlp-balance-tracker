@@ -219,17 +219,19 @@ function Dashboard() {
             <div className="overflow-hidden rounded-md border border-border">
               <table className="w-full table-fixed text-sm">
                 <colgroup>
-                  <col className="w-[26%]" />
+                  <col className="w-[24%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[16%]" />
                   <col className="w-[15%]" />
-                  <col className="w-[18%]" />
-                  <col className="w-[18%]" />
-                  <col className="w-[23%]" />
                 </colgroup>
                 <thead className="bg-secondary text-left text-xs uppercase tracking-wide text-text-secondary">
                   <tr>
                     <th className="px-4 py-2.5">Agent</th>
                     <th className="px-4 py-2.5">Platform</th>
                     <th className="px-4 py-2.5 text-right">Closing balance</th>
+                    <th className="px-4 py-2.5 text-right">Band limit</th>
                     <th className="px-4 py-2.5">Breakout</th>
                     <th className="px-4 py-2.5 text-right">Review</th>
                   </tr>
@@ -264,9 +266,18 @@ function Dashboard() {
                           </td>
                           <td className="px-4 py-3"><PlatformBadge name={a.platformName} /></td>
                           <td className="px-4 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
+                          <td className="px-4 py-3 text-right tabular-nums text-text-secondary">
+                            {a.breakoutBoundary != null ? (
+                              <>
+                                <span className="text-[11px] uppercase tracking-wide mr-1">{a.breakoutBoundaryLabel}:</span>
+                                {formatGBP(a.breakoutBoundary)}
+                              </>
+                            ) : "—"}
+                          </td>
                           <td className="px-4 py-3">
                             <StatusPill status={a.status} pct={a.breakoutPct ?? undefined} />
                           </td>
+
                           <td className="px-4 py-3 text-right">
                             {isDone ? (
                               <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, fontWeight: 500, background: entry.action === "no_action" ? "rgba(39,174,96,0.12)" : "rgba(46,125,138,0.12)", color: entry.action === "no_action" ? "#1E8449" : "#2E7D8A" }}>
