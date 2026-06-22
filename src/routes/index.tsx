@@ -156,8 +156,10 @@ function Dashboard() {
   const data = useDashboardData();
   // Trend alerts: trending down only, sorted by steepest % drop
   const [showAllBreakouts, setShowAllBreakouts] = React.useState(false);
-  const [reviewingAgentId, setReviewingAgentId] = React.useState<string | null>(null);
-  const reviewingAgentRef = React.useRef<any>(null);
+  const [reviewingAgent, setReviewingAgent] = React.useState<{
+    platformId: string; agentId: string; agentName: string; platformName: string;
+    latest: { balance: number }; status: string; breakoutPct?: number | null;
+  } | null>(null);
   const [doneIds, setDoneIds] = React.useState<Record<string, "no_action" | "escalate_carl">>(() => {
     const existing = getJoEntries();
     const map: Record<string, "no_action" | "escalate_carl"> = {};
@@ -337,7 +339,7 @@ function Dashboard() {
                             </span>
                           ) : (
                             <button
-                              onClick={() => { reviewingAgentRef.current = a; setReviewingAgentId(a.agentId); }}
+                              onClick={() => setReviewingAgent({ platformId: a.platformId, agentId: a.agentId, agentName: a.agentName, platformName: a.platformName, latest: a.latest, status: a.status, breakoutPct: a.breakoutPct })}
                               className="text-xs px-3 py-1 rounded border border-border hover:bg-secondary transition font-medium"
                               style={{ color: "var(--teal)" }}
                             >
@@ -567,13 +569,13 @@ function Dashboard() {
           )}
         </section>
       </main>
-      {reviewingAgentId && reviewingAgentRef.current && ReactDOM.createPortal(
+      {reviewingAgent && ReactDOM.createPortal(
         <ReviewModal
-          agent={reviewingAgentRef.current}
-          onClose={() => setReviewingAgentId(null)}
+          agent={reviewingAgent}
+          onClose={() => setReviewingAgent(null)}
           onDone={(entry) => {
             setDoneIds(prev => ({ ...prev, [entry.id]: entry.action as any }));
-            setReviewingAgentId(null);
+            setReviewingAgent(null);
           }}
         />,
         document.body
