@@ -40,21 +40,25 @@ function Dashboard() {
   const [showAllTrends, setShowAllTrends] = React.useState(false);
   const [showAllTrendUp, setShowAllTrendUp] = React.useState(false);
 
-  const trendAlerts = data.loading
-    ? []
-    : data.agents
-        .filter((a) => a.trend === "down" && a.latest.mean >= 25000)
-        .map((a) => ({ ...a, trendPct: trendPercentChange(a.raw) }))
-        .filter((a) => a.trendPct <= -15)
-        .sort((a, b) => a.trendPct - b.trendPct); // most negative first
+  // Pre-calculate trendPct for all agents once - avoids recalculating per render
+  const agentsWithTrend = React.useMemo(() =>
+    data.loading ? [] : data.agents.map(a => ({ ...a, trendPct: trendPercentChange(a.raw) })),
+    [data.agents, data.loading]
+  );
 
-  const trendUpAlerts = data.loading
-    ? []
-    : data.agents
-        .filter((a) => a.trend === "up" && a.latest.mean >= 25000)
-        .map((a) => ({ ...a, trendPct: trendPercentChange(a.raw) }))
-        .filter((a) => a.trendPct >= 15)
-        .sort((a, b) => b.trendPct - a.trendPct); // biggest increase first
+  const trendAlerts = React.useMemo(() =>
+    agentsWithTrend
+      .filter((a) => a.trend === "down" && a.latest.mean >= 25000 && a.trendPct <= -15)
+      .sort((a, b) => a.trendPct - b.trendPct),
+    [agentsWithTrend]
+  );
+
+  const trendUpAlerts = React.useMemo(() =>
+    agentsWithTrend
+      .filter((a) => a.trend === "up" && a.latest.mean >= 25000 && a.trendPct >= 15)
+      .sort((a, b) => b.trendPct - a.trendPct),
+    [agentsWithTrend]
+  );
 
   // Breakout alerts sorted by biggest % outside band
   const sortedBreakouts = data.loading
@@ -376,7 +380,7 @@ function Dashboard() {
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {data.platforms.map((p) => {
-                const pct = trendPercentChange(p.raw);
+                const pct = agentsWithTrend.find(a => a.platformId === p.id)?.trendPct ?? trendPercentChange(p.raw);
                 const pBI = breakoutInfo(p.series);
                 return (
                   <Link

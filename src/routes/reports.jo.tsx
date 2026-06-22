@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useDashboardData } from "@/data/useDashboardData";
 import { TopNav } from "@/components/TopNav";
 import { formatGBP } from "@/lib/format";
-import { trendPercentChange } from "@/data/bollinger";
 import {
   HIGH_REASONS, LOW_REASONS, alertTypeLabel,
   getJoEntries, saveJoEntries, escalateToCarl,
@@ -42,28 +41,19 @@ function JoReportPage() {
       });
     }
 
-    // Trend alerts
-    const trendDown = data.agents.filter(a => a.trend === "down" && a.latest.mean >= 25000);
-    for (const agent of trendDown) {
-      const pct = trendPercentChange(agent.raw);
-      if (pct > -15) continue;
-      const id = `jo-${today}-${agent.platformId}-${agent.agentId}-trend`;
-      const ex = existing.find(e => e.id === id);
-      alerts.push(ex ?? {
-        id, date: today,
-        agentId: agent.agentId, agentName: agent.agentName,
-        platformId: agent.platformId, platformName: agent.platformName,
-        alertType: "trend_down", balance: agent.latest.balance,
-        variancePct: pct, reason: "", notes: "", action: "", passedToCarl: false,
-      });
-    }
-
     // Carry over unresolved from previous days
     const oldUnresolved = existing.filter(e =>
       e.date !== today && e.action === "" && !alerts.find(a => a.id === e.id)
     );
 
-    setEntries([...alerts, ...oldUnresolved]);
+    const sorted = [...alerts, ...oldUnresolved].sort((a, b) => {
+      // Below band first (most urgent), then above band
+      if (a.alertType === "below_band" && b.alertType !== "below_band") return -1;
+      if (a.alertType !== "below_band" && b.alertType === "below_band") return 1;
+      // Within same type, sort by absolute variance % descending
+      return Math.abs(b.variancePct) - Math.abs(a.variancePct);
+    });
+    setEntries(sorted);
   }, [data.loading]);
 
   function update(id: string, field: keyof JoEntry, value: string) {
