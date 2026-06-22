@@ -296,7 +296,7 @@ function Dashboard() {
                         </tr>
                         {isOpen && (
                           <tr className="border-t border-border" style={{ background: "var(--color-background-secondary)" }}>
-                            <td colSpan={5} className="px-4 py-3">
+                            <td colSpan={6} className="px-4 py-3">
                               <div className="flex items-start gap-3 flex-wrap">
                                 <div style={{ minWidth: 200, flex: 1 }}>
                                   <label className="text-xs font-medium text-text-secondary mb-1 block">Reason</label>
