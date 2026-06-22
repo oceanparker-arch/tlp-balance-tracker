@@ -8,6 +8,7 @@ import { PlatformBadge, StatusPill, TrendArrow } from "@/components/StatusPill";
 import { LiveBadge } from "@/components/LiveBadge";
 import { formatGBP } from "@/lib/format";
 import { trendPercentChange, breakoutInfo } from "@/data/bollinger";
+import { HIGH_REASONS, LOW_REASONS, getJoEntries, saveJoEntries, escalateToCarl, type JoEntry } from "@/data/reportingData";
 
 
 
@@ -68,6 +69,120 @@ function ReviewPanel({ entryId, alertType, existingEntry, onEscalate, onNoAction
   );
 }
 
+
+// ── Review Modal ─────────────────────────────────────────────────────────────
+interface ReviewModalProps {
+  agent: { platformId: string; agentId: string; agentName: string; platformName: string; latest: { balance: number }; status: string; breakoutPct?: number | null; };
+  onClose: () => void;
+  onDone: (entry: JoEntry) => void;
+}
+
+function ReviewModal({ agent, onClose, onDone }: ReviewModalProps) {
+  const [reason, setReason] = React.useState("");
+  const [notes, setNotes]   = React.useState("");
+  const today    = new Date().toISOString().slice(0, 10);
+  const isHigh   = agent.status === "above";
+  const reasons  = isHigh ? HIGH_REASONS : LOW_REASONS;
+  const showNotes = reason === "Other" || reason === "Potential fraud";
+  const entryId  = `jo-${today}-${agent.platformId}-${agent.agentId}-band`;
+
+  function buildEntry(action: "escalate_carl" | "no_action"): JoEntry {
+    return {
+      id: entryId, date: today,
+      agentId: agent.agentId, agentName: agent.agentName,
+      platformId: agent.platformId, platformName: agent.platformName,
+      alertType: isHigh ? "above_band" : "below_band",
+      balance: agent.latest.balance, variancePct: agent.breakoutPct ?? 0,
+      reason, notes, action, passedToCarl: action === "escalate_carl",
+      passedToCarlAt: action === "escalate_carl" ? new Date().toISOString() : undefined,
+    };
+  }
+
+  function handleEscalate() {
+    const entry = buildEntry("escalate_carl");
+    const existing = getJoEntries().filter(e => e.id !== entryId);
+    saveJoEntries([...existing, entry]);
+    escalateToCarl(entry);
+    onDone(entry);
+  }
+
+  function handleNoAction() {
+    const entry = buildEntry("no_action");
+    const existing = getJoEntries().filter(e => e.id !== entryId);
+    saveJoEntries([...existing, entry]);
+    onDone(entry);
+  }
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{ background: "var(--color-background-primary)", borderRadius: 12, border: "0.5px solid var(--color-border-tertiary)", width: "100%", maxWidth: 520, boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}>
+        <div style={{ padding: "16px 20px", borderBottom: "0.5px solid var(--color-border-tertiary)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 15, color: "var(--color-text-primary)" }}>{agent.agentName}</div>
+            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2 }}>
+              {agent.platformName} · {isHigh ? "↑ Above band" : "↓ Below band"} · {agent.breakoutPct != null ? `${agent.breakoutPct >= 0 ? "+" : ""}${agent.breakoutPct.toFixed(1)}%` : ""}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--color-text-secondary)", lineHeight: 1, padding: "4px 8px" }}>×</button>
+        </div>
+
+        <div style={{ padding: "20px" }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", display: "block", marginBottom: 6 }}>Reason</label>
+            <select
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              style={{ width: "100%", border: "0.5px solid var(--color-border-secondary)", borderRadius: 6, padding: "8px 10px", fontSize: 13, background: "var(--color-background-primary)", color: "var(--color-text-primary)" }}
+            >
+              <option value="">Select reason…</option>
+              {reasons.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+
+          {showNotes && (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", display: "block", marginBottom: 6 }}>Notes</label>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="Add notes…"
+                rows={3}
+                style={{ width: "100%", border: "0.5px solid var(--color-border-secondary)", borderRadius: 6, padding: "8px 10px", fontSize: 13, background: "var(--color-background-primary)", color: "var(--color-text-primary)", resize: "vertical", boxSizing: "border-box" }}
+              />
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button
+              onClick={onClose}
+              style={{ fontSize: 13, padding: "8px 16px", borderRadius: 6, border: "0.5px solid var(--color-border-secondary)", background: "none", cursor: "pointer", color: "var(--color-text-primary)" }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleNoAction}
+              disabled={!reason}
+              style={{ fontSize: 13, padding: "8px 16px", borderRadius: 6, border: "0.5px solid var(--color-border-secondary)", background: "none", cursor: "pointer", color: "var(--color-text-primary)", opacity: reason ? 1 : 0.4 }}
+            >
+              No action required
+            </button>
+            <button
+              onClick={handleEscalate}
+              disabled={!reason || (showNotes && !notes.trim())}
+              style={{ fontSize: 13, padding: "8px 16px", borderRadius: 6, border: "none", background: "#1B2E4B", color: "white", cursor: "pointer", opacity: (!reason || (showNotes && !notes.trim())) ? 0.4 : 1 }}
+            >
+              Escalate to Carl
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/")(({
   head: () => ({
     meta: [
@@ -96,6 +211,14 @@ function Dashboard() {
   const data = useDashboardData();
   // Trend alerts: trending down only, sorted by steepest % drop
   const [showAllBreakouts, setShowAllBreakouts] = React.useState(false);
+  const [reviewingAgent, setReviewingAgent] = React.useState<typeof sortedBreakouts[0] | null>(null);
+  const [doneIds, setDoneIds] = React.useState<Record<string, "no_action" | "escalate_carl">>(() => {
+    const existing = getJoEntries();
+    const map: Record<string, "no_action" | "escalate_carl"> = {};
+    for (const e of existing) if (e.action) map[e.id] = e.action as any;
+    return map;
+  });
+  const today = new Date().toISOString().slice(0, 10);
 
   const [showAllTrends, setShowAllTrends] = React.useState(false);
   const [showAllTrendUp, setShowAllTrendUp] = React.useState(false);
@@ -259,13 +382,23 @@ function Dashboard() {
                         <StatusPill status={a.status} pct={a.breakoutPct ?? undefined} />
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Link
-                          to="/reports/jo"
-                          className="text-xs px-3 py-1 rounded border border-border hover:bg-secondary transition font-medium"
-                          style={{ color: "var(--teal)" }}
-                        >
-                          Review
-                        </Link>
+                        {(() => {
+                          const eid = `jo-${today}-${a.platformId}-${a.agentId}-band`;
+                          const done = doneIds[eid];
+                          return done ? (
+                            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, fontWeight: 500, background: done === "no_action" ? "rgba(39,174,96,0.12)" : "rgba(46,125,138,0.12)", color: done === "no_action" ? "#1E8449" : "#2E7D8A" }}>
+                              {done === "no_action" ? "No action" : "→ Carl"}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => setReviewingAgent(a)}
+                              className="text-xs px-3 py-1 rounded border border-border hover:bg-secondary transition font-medium"
+                              style={{ color: "var(--teal)" }}
+                            >
+                              Review
+                            </button>
+                          );
+                        })()}
                       </td>
                     </tr>
                   ))}
@@ -488,6 +621,16 @@ function Dashboard() {
           )}
         </section>
       </main>
+      {reviewingAgent && (
+        <ReviewModal
+          agent={reviewingAgent}
+          onClose={() => setReviewingAgent(null)}
+          onDone={(entry) => {
+            setDoneIds(prev => ({ ...prev, [entry.id]: entry.action as any }));
+            setReviewingAgent(null);
+          }}
+        />
+      )}
     </div>
   );
 }
