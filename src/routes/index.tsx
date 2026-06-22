@@ -115,27 +115,27 @@ function ReviewModal({ agent, onClose, onDone }: ReviewModalProps) {
 
   return (
     <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{ background: "var(--color-background-primary)", borderRadius: 12, border: "0.5px solid var(--color-border-tertiary)", width: "100%", maxWidth: 520, boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}>
-        <div style={{ padding: "16px 20px", borderBottom: "0.5px solid var(--color-border-tertiary)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ background: "#ffffff", borderRadius: 12, border: "0.5px solid #e5e7eb", width: "100%", maxWidth: 520, boxShadow: "0 8px 32px rgba(0,0,0,0.25)" }}>
+        <div style={{ padding: "16px 20px", borderBottom: "0.5px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontWeight: 600, fontSize: 15, color: "var(--color-text-primary)" }}>{agent.agentName}</div>
-            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2 }}>
+            <div style={{ fontWeight: 600, fontSize: 15, color: "#111" }}>{agent.agentName}</div>
+            <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>
               {agent.platformName} · {isHigh ? "↑ Above band" : "↓ Below band"} · {agent.breakoutPct != null ? `${agent.breakoutPct >= 0 ? "+" : ""}${agent.breakoutPct.toFixed(1)}%` : ""}
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--color-text-secondary)", lineHeight: 1, padding: "4px 8px" }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#666", lineHeight: 1, padding: "4px 8px" }}>×</button>
         </div>
 
         <div style={{ padding: "20px" }}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", display: "block", marginBottom: 6 }}>Reason</label>
+            <label style={{ fontSize: 12, fontWeight: 500, color: "#555", display: "block", marginBottom: 6 }}>Reason</label>
             <select
               value={reason}
               onChange={e => setReason(e.target.value)}
-              style={{ width: "100%", border: "0.5px solid var(--color-border-secondary)", borderRadius: 6, padding: "8px 10px", fontSize: 13, background: "var(--color-background-primary)", color: "var(--color-text-primary)" }}
+              style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 6, padding: "8px 10px", fontSize: 13, background: "#fff", color: "#111" }}
             >
               <option value="">Select reason…</option>
               {reasons.map(r => <option key={r} value={r}>{r}</option>)}
@@ -144,13 +144,13 @@ function ReviewModal({ agent, onClose, onDone }: ReviewModalProps) {
 
           {showNotes && (
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", display: "block", marginBottom: 6 }}>Notes</label>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "#555", display: "block", marginBottom: 6 }}>Notes</label>
               <textarea
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
                 placeholder="Add notes…"
                 rows={3}
-                style={{ width: "100%", border: "0.5px solid var(--color-border-secondary)", borderRadius: 6, padding: "8px 10px", fontSize: 13, background: "var(--color-background-primary)", color: "var(--color-text-primary)", resize: "vertical", boxSizing: "border-box" }}
+                style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 6, padding: "8px 10px", fontSize: 13, background: "#fff", color: "#111", resize: "vertical", boxSizing: "border-box" as const }}
               />
             </div>
           )}
@@ -158,7 +158,7 @@ function ReviewModal({ agent, onClose, onDone }: ReviewModalProps) {
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <button
               onClick={onClose}
-              style={{ fontSize: 13, padding: "8px 16px", borderRadius: 6, border: "0.5px solid var(--color-border-secondary)", background: "none", cursor: "pointer", color: "var(--color-text-primary)" }}
+              style={{ fontSize: 13, padding: "8px 16px", borderRadius: 6, border: "1px solid #d1d5db", background: "none", cursor: "pointer", color: "#111" }}
             >
               Cancel
             </button>
@@ -211,7 +211,8 @@ function Dashboard() {
   const data = useDashboardData();
   // Trend alerts: trending down only, sorted by steepest % drop
   const [showAllBreakouts, setShowAllBreakouts] = React.useState(false);
-  const [reviewingAgent, setReviewingAgent] = React.useState<typeof sortedBreakouts[0] | null>(null);
+  const [reviewingAgentId, setReviewingAgentId] = React.useState<string | null>(null);
+  const reviewingAgentRef = React.useRef<typeof sortedBreakouts[0] | null>(null);
   const [doneIds, setDoneIds] = React.useState<Record<string, "no_action" | "escalate_carl">>(() => {
     const existing = getJoEntries();
     const map: Record<string, "no_action" | "escalate_carl"> = {};
@@ -391,7 +392,7 @@ function Dashboard() {
                             </span>
                           ) : (
                             <button
-                              onClick={() => setReviewingAgent(a)}
+                              onClick={() => { reviewingAgentRef.current = a; setReviewingAgentId(a.agentId); }}
                               className="text-xs px-3 py-1 rounded border border-border hover:bg-secondary transition font-medium"
                               style={{ color: "var(--teal)" }}
                             >
@@ -621,13 +622,13 @@ function Dashboard() {
           )}
         </section>
       </main>
-      {reviewingAgent && (
+      {reviewingAgentId && reviewingAgentRef.current && (
         <ReviewModal
-          agent={reviewingAgent}
-          onClose={() => setReviewingAgent(null)}
+          agent={reviewingAgentRef.current}
+          onClose={() => setReviewingAgentId(null)}
           onDone={(entry) => {
             setDoneIds(prev => ({ ...prev, [entry.id]: entry.action as any }));
-            setReviewingAgent(null);
+            setReviewingAgentId(null);
           }}
         />
       )}
