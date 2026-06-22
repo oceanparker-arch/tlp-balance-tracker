@@ -1,4 +1,5 @@
 import React from "react";
+import ReactDOM from "react-dom";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useDashboardData } from "@/data/useDashboardData";
 import { TopNav } from "@/components/TopNav";
@@ -622,7 +623,7 @@ function Dashboard() {
           )}
         </section>
       </main>
-      {reviewingAgentId && reviewingAgentRef.current && (
+      {reviewingAgentId && reviewingAgentRef.current && ReactDOM.createPortal(
         <ReviewModal
           agent={reviewingAgentRef.current}
           onClose={() => setReviewingAgentId(null)}
@@ -630,7 +631,8 @@ function Dashboard() {
             setDoneIds(prev => ({ ...prev, [entry.id]: entry.action as any }));
             setReviewingAgentId(null);
           }}
-        />
+        />,
+        document.body
       )}
     </div>
   );
