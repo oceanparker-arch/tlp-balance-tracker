@@ -314,8 +314,10 @@ function Dashboard() {
                                     <label className="text-xs font-medium text-text-secondary mb-1 block">Notes</label>
                                     <input
                                       type="text"
-                                      value={entry?.notes ?? ""}
-                                      onChange={e => updateEntry(entryId, "notes", e.target.value)}
+                                      key={entryId + "-notes"}
+                                      defaultValue={entry?.notes ?? ""}
+                                      onBlur={e => updateEntry(entryId, "notes", e.target.value)}
+                                      onKeyDown={e => { if (e.key === 'Enter') updateEntry(entryId, "notes", (e.target as HTMLInputElement).value); }}
                                       placeholder="Add notes…"
                                       className="w-full border border-border rounded px-2 py-1.5 text-sm bg-card text-text-primary"
                                     />
