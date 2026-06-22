@@ -13,6 +13,73 @@ import {
   type JoEntry,
 } from "@/data/reportingData";
 
+
+// ── Self-contained review panel — isolated to prevent full page re-renders ──
+interface ReviewPanelProps {
+  entryId: string;
+  alertType: "above_band" | "below_band" | "trend_down" | "trend_up";
+  existingEntry?: JoEntry;
+  onEscalate: (reason: string, notes: string) => void;
+  onNoAction: (reason: string) => void;
+}
+
+function ReviewPanel({ entryId, alertType, existingEntry, onEscalate, onNoAction }: ReviewPanelProps) {
+  const isHigh = alertType === "above_band" || alertType === "trend_up";
+  const reasons = isHigh ? HIGH_REASONS : LOW_REASONS;
+  const [reason, setReason] = React.useState(existingEntry?.reason ?? "");
+  const [notes, setNotes]   = React.useState(existingEntry?.notes ?? "");
+  const showNotes = reason === "Other" || reason === "Potential fraud";
+
+  return (
+    <div className="px-5 py-4 flex flex-col gap-3" style={{ background: "var(--color-background-secondary)" }}>
+      <div className="flex items-start gap-4 flex-wrap">
+        <div style={{ minWidth: 200, flex: 1 }}>
+          <label className="text-xs font-medium text-text-secondary mb-1 block">Reason</label>
+          <select
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            className="w-full border border-border rounded px-2 py-1.5 text-sm bg-card text-text-primary"
+          >
+            <option value="">Select reason…</option>
+            {reasons.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+        {showNotes && (
+          <div style={{ minWidth: 240, flex: 2 }}>
+            <label className="text-xs font-medium text-text-secondary mb-1 block">Notes</label>
+            <input
+              type="text"
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Add notes…"
+              className="w-full border border-border rounded px-2 py-1.5 text-sm bg-card text-text-primary"
+              autoFocus
+            />
+          </div>
+        )}
+        {reason && (
+          <div className="flex items-end gap-2 mt-5">
+            <button
+              onClick={() => onEscalate(reason, notes)}
+              disabled={showNotes && !notes.trim()}
+              className="text-xs px-3 py-1.5 rounded text-white font-medium disabled:opacity-40"
+              style={{ background: "#1B2E4B" }}
+            >
+              Escalate to Carl
+            </button>
+            <button
+              onClick={() => onNoAction(reason)}
+              className="text-xs px-3 py-1.5 rounded border border-border hover:bg-secondary transition"
+            >
+              No action required
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/")(({
   head: () => ({
     meta: [
@@ -41,35 +108,22 @@ function Dashboard() {
   const data = useDashboardData();
   // Trend alerts: trending down only, sorted by steepest % drop
   const [showAllBreakouts, setShowAllBreakouts] = React.useState(false);
-  const [reviewOpen, setReviewOpen] = React.useState<string | null>(null); // agentId being reviewed
-  const [joEntries, setJoEntries] = React.useState<Record<string, JoEntry>>({});
+  const [reviewOpen, setReviewOpen] = React.useState<string | null>(null);
+  const [doneEntries, setDoneEntries] = React.useState<Record<string, JoEntry>>({});
   const today = new Date().toISOString().slice(0, 10);
 
   React.useEffect(() => {
     const existing = getJoEntries();
     const map: Record<string, JoEntry> = {};
     for (const e of existing) map[e.id] = e;
-    setJoEntries(map);
+    setDoneEntries(map);
   }, []);
 
   function getEntryId(a: typeof sortedBreakouts[0]) {
     return `jo-${today}-${a.platformId}-${a.agentId}-band`;
   }
 
-  function updateEntry(id: string, field: string, value: string) {
-    setJoEntries(prev => {
-      const entry = prev[id] ?? {
-        id, date: today,
-        agentId: "", agentName: "", platformId: "", platformName: "",
-        alertType: "below_band" as const,
-        balance: 0, variancePct: 0,
-        reason: "", notes: "", action: "", passedToCarl: false,
-      };
-      return { ...prev, [id]: { ...entry, [field]: value } };
-    });
-  }
-
-  function handleNoAction(a: typeof sortedBreakouts[0]) {
+  function handleNoAction(a: typeof sortedBreakouts[0], reason: string) {
     const id = getEntryId(a);
     const entry: JoEntry = {
       id, date: today,
@@ -77,18 +131,15 @@ function Dashboard() {
       platformId: a.platformId, platformName: a.platformName,
       alertType: a.status === "above" ? "above_band" : "below_band",
       balance: a.latest.balance, variancePct: a.breakoutPct ?? 0,
-      reason: joEntries[id]?.reason ?? "",
-      notes: joEntries[id]?.notes ?? "",
-      action: "no_action", passedToCarl: false,
+      reason, notes: "", action: "no_action", passedToCarl: false,
     };
-    const updated = { ...joEntries, [id]: entry };
-    setJoEntries(updated);
+    setDoneEntries(prev => ({ ...prev, [id]: entry }));
     const existing = getJoEntries().filter(e => e.id !== id);
     saveJoEntries([...existing, entry]);
     setReviewOpen(null);
   }
 
-  function handleEscalate(a: typeof sortedBreakouts[0]) {
+  function handleEscalate(a: typeof sortedBreakouts[0], reason: string, notes: string) {
     const id = getEntryId(a);
     const entry: JoEntry = {
       id, date: today,
@@ -96,13 +147,10 @@ function Dashboard() {
       platformId: a.platformId, platformName: a.platformName,
       alertType: a.status === "above" ? "above_band" : "below_band",
       balance: a.latest.balance, variancePct: a.breakoutPct ?? 0,
-      reason: joEntries[id]?.reason ?? "",
-      notes: joEntries[id]?.notes ?? "",
-      action: "escalate_carl", passedToCarl: true,
+      reason, notes, action: "escalate_carl", passedToCarl: true,
       passedToCarlAt: new Date().toISOString(),
     };
-    const updated = { ...joEntries, [id]: entry };
-    setJoEntries(updated);
+    setDoneEntries(prev => ({ ...prev, [id]: entry }));
     const existing = getJoEntries().filter(e => e.id !== id);
     saveJoEntries([...existing, entry]);
     escalateToCarl(entry);
@@ -239,12 +287,9 @@ function Dashboard() {
                 <tbody>
                   {(showAllBreakouts ? sortedBreakouts : sortedBreakouts.slice(0, 10)).map((a) => {
                     const entryId = getEntryId(a);
-                    const entry = joEntries[entryId];
+                    const entry = doneEntries[entryId];
                     const isOpen = reviewOpen === entryId;
                     const isDone = entry?.action !== "" && entry?.action != null;
-                    const isHigh = a.status === "above";
-                    const reasons = isHigh ? HIGH_REASONS : LOW_REASONS;
-                    const showNotes = entry?.reason === "Other" || entry?.reason === "Potential fraud";
                     return (
                       <React.Fragment key={`${a.platformId}-${a.agentId}`}>
                         <tr
@@ -295,52 +340,15 @@ function Dashboard() {
                           </td>
                         </tr>
                         {isOpen && (
-                          <tr className="border-t border-border" style={{ background: "var(--color-background-secondary)" }}>
-                            <td colSpan={6} className="px-4 py-3">
-                              <div className="flex items-start gap-3 flex-wrap">
-                                <div style={{ minWidth: 200, flex: 1 }}>
-                                  <label className="text-xs font-medium text-text-secondary mb-1 block">Reason</label>
-                                  <select
-                                    value={entry?.reason ?? ""}
-                                    onChange={e => updateEntry(entryId, "reason", e.target.value)}
-                                    className="w-full border border-border rounded px-2 py-1.5 text-sm bg-card text-text-primary"
-                                  >
-                                    <option value="">Select reason…</option>
-                                    {reasons.map(r => <option key={r} value={r}>{r}</option>)}
-                                  </select>
-                                </div>
-                                {showNotes && (
-                                  <div style={{ minWidth: 240, flex: 2 }}>
-                                    <label className="text-xs font-medium text-text-secondary mb-1 block">Notes</label>
-                                    <input
-                                      type="text"
-                                      key={entryId + "-notes"}
-                                      defaultValue={entry?.notes ?? ""}
-                                      onBlur={e => updateEntry(entryId, "notes", e.target.value)}
-                                      onKeyDown={e => { if (e.key === 'Enter') updateEntry(entryId, "notes", (e.target as HTMLInputElement).value); }}
-                                      placeholder="Add notes…"
-                                      className="w-full border border-border rounded px-2 py-1.5 text-sm bg-card text-text-primary"
-                                    />
-                                  </div>
-                                )}
-                                <div className="flex items-end gap-2 mt-5">
-                                  <button
-                                    onClick={() => handleEscalate(a)}
-                                    disabled={!entry?.reason || (showNotes && !entry?.notes?.trim())}
-                                    className="text-xs px-3 py-1.5 rounded text-white font-medium disabled:opacity-40"
-                                    style={{ background: "#1B2E4B" }}
-                                  >
-                                    Escalate to Carl
-                                  </button>
-                                  <button
-                                    onClick={() => handleNoAction(a)}
-                                    disabled={!entry?.reason}
-                                    className="text-xs px-3 py-1.5 rounded border border-border hover:bg-secondary transition disabled:opacity-40"
-                                  >
-                                    No action required
-                                  </button>
-                                </div>
-                              </div>
+                          <tr className="border-t border-border">
+                            <td colSpan={6} style={{ padding: 0 }}>
+                              <ReviewPanel
+                                entryId={entryId}
+                                alertType={a.status === "above" ? "above_band" : "below_band"}
+                                existingEntry={entry}
+                                onEscalate={(reason, notes) => handleEscalate(a, reason, notes)}
+                                onNoAction={(reason) => handleNoAction(a, reason)}
+                              />
                             </td>
                           </tr>
                         )}
