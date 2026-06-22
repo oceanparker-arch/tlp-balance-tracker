@@ -11,10 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ReportsRouteImport } from './routes/reports'
-import { Route as ReportsJoRouteImport } from './routes/reports.jo'
-import { Route as ReportsCarlRouteImport } from './routes/reports.carl'
 import { Route as ImportRouteImport } from './routes/import'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReportsJoRouteImport } from './routes/reports.jo'
+import { Route as ReportsCarlRouteImport } from './routes/reports.carl'
 import { Route as PlatformPlatformIdRouteImport } from './routes/platform.$platformId'
 import { Route as AgentPlatformIdAgentIdRouteImport } from './routes/agent.$platformId.$agentId'
 
@@ -23,43 +23,36 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
-
-const ReportsJoRoute = ReportsJoRouteImport.update({
-  id: '/reports/jo',
-  path: '/reports/jo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-
-const ReportsCarlRoute = ReportsCarlRouteImport.update({
-  id: '/reports/carl',
-  path: '/reports/carl',
-  getParentRoute: () => rootRouteImport,
-} as any)
-
 const ImportRoute = ImportRouteImport.update({
   id: '/import',
   path: '/import',
   getParentRoute: () => rootRouteImport,
 } as any)
-
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-
+const ReportsJoRoute = ReportsJoRouteImport.update({
+  id: '/jo',
+  path: '/jo',
+  getParentRoute: () => ReportsRoute,
+} as any)
+const ReportsCarlRoute = ReportsCarlRouteImport.update({
+  id: '/carl',
+  path: '/carl',
+  getParentRoute: () => ReportsRoute,
+} as any)
 const PlatformPlatformIdRoute = PlatformPlatformIdRouteImport.update({
   id: '/platform/$platformId',
   path: '/platform/$platformId',
   getParentRoute: () => rootRouteImport,
 } as any)
-
 const AgentPlatformIdAgentIdRoute = AgentPlatformIdAgentIdRouteImport.update({
   id: '/agent/$platformId/$agentId',
   path: '/agent/$platformId/$agentId',
@@ -69,91 +62,158 @@ const AgentPlatformIdAgentIdRoute = AgentPlatformIdAgentIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/import': typeof ImportRoute
-  '/reports': typeof ReportsRoute
-  '/reports/jo': typeof ReportsJoRoute
-  '/reports/carl': typeof ReportsCarlRoute
-  '/platform/$platformId': typeof PlatformPlatformIdRoute
-  '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
+  '/reports': typeof ReportsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/platform/$platformId': typeof PlatformPlatformIdRoute
+  '/reports/carl': typeof ReportsCarlRoute
+  '/reports/jo': typeof ReportsJoRoute
+  '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
-
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/import': typeof ImportRoute
-  '/reports': typeof ReportsRoute
-  '/reports/jo': typeof ReportsJoRoute
-  '/reports/carl': typeof ReportsCarlRoute
-  '/platform/$platformId': typeof PlatformPlatformIdRoute
-  '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
+  '/reports': typeof ReportsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/platform/$platformId': typeof PlatformPlatformIdRoute
+  '/reports/carl': typeof ReportsCarlRoute
+  '/reports/jo': typeof ReportsJoRoute
+  '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
-
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/import': typeof ImportRoute
-  '/reports': typeof ReportsRoute
-  '/reports/jo': typeof ReportsJoRoute
-  '/reports/carl': typeof ReportsCarlRoute
-  '/platform/$platformId': typeof PlatformPlatformIdRoute
-  '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
+  '/reports': typeof ReportsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/platform/$platformId': typeof PlatformPlatformIdRoute
+  '/reports/carl': typeof ReportsCarlRoute
+  '/reports/jo': typeof ReportsJoRoute
+  '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
-
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/import'
     | '/reports'
-    | '/reports/jo'
-    | '/reports/carl'
-    | '/platform/$platformId'
-    | '/agent/$platformId/$agentId'
     | '/sitemap.xml'
+    | '/platform/$platformId'
+    | '/reports/carl'
+    | '/reports/jo'
+    | '/agent/$platformId/$agentId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/import'
     | '/reports'
-    | '/reports/jo'
-    | '/reports/carl'
-    | '/platform/$platformId'
-    | '/agent/$platformId/$agentId'
     | '/sitemap.xml'
+    | '/platform/$platformId'
+    | '/reports/carl'
+    | '/reports/jo'
+    | '/agent/$platformId/$agentId'
   id:
     | '__root__'
     | '/'
     | '/import'
     | '/reports'
-    | '/reports/jo'
-    | '/reports/carl'
-    | '/platform/$platformId'
-    | '/agent/$platformId/$agentId'
     | '/sitemap.xml'
+    | '/platform/$platformId'
+    | '/reports/carl'
+    | '/reports/jo'
+    | '/agent/$platformId/$agentId'
   fileRoutesById: FileRoutesById
 }
-
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ImportRoute: typeof ImportRoute
-  ReportsRoute: typeof ReportsRoute
-  ReportsJoRoute: typeof ReportsJoRoute
-  ReportsCarlRoute: typeof ReportsCarlRoute
+  ReportsRoute: typeof ReportsRouteWithChildren
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   PlatformPlatformIdRoute: typeof PlatformPlatformIdRoute
   AgentPlatformIdAgentIdRoute: typeof AgentPlatformIdAgentIdRoute
-  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
 }
+
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/import': {
+      id: '/import'
+      path: '/import'
+      fullPath: '/import'
+      preLoaderRoute: typeof ImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports/jo': {
+      id: '/reports/jo'
+      path: '/jo'
+      fullPath: '/reports/jo'
+      preLoaderRoute: typeof ReportsJoRouteImport
+      parentRoute: typeof ReportsRoute
+    }
+    '/reports/carl': {
+      id: '/reports/carl'
+      path: '/carl'
+      fullPath: '/reports/carl'
+      preLoaderRoute: typeof ReportsCarlRouteImport
+      parentRoute: typeof ReportsRoute
+    }
+    '/platform/$platformId': {
+      id: '/platform/$platformId'
+      path: '/platform/$platformId'
+      fullPath: '/platform/$platformId'
+      preLoaderRoute: typeof PlatformPlatformIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/$platformId/$agentId': {
+      id: '/agent/$platformId/$agentId'
+      path: '/agent/$platformId/$agentId'
+      fullPath: '/agent/$platformId/$agentId'
+      preLoaderRoute: typeof AgentPlatformIdAgentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+  }
+}
+
+interface ReportsRouteChildren {
+  ReportsCarlRoute: typeof ReportsCarlRoute
+  ReportsJoRoute: typeof ReportsJoRoute
+}
+
+const ReportsRouteChildren: ReportsRouteChildren = {
+  ReportsCarlRoute: ReportsCarlRoute,
+  ReportsJoRoute: ReportsJoRoute,
+}
+
+const ReportsRouteWithChildren =
+  ReportsRoute._addFileChildren(ReportsRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ImportRoute: ImportRoute,
-  ReportsRoute: ReportsRoute,
-  ReportsJoRoute: ReportsJoRoute,
-  ReportsCarlRoute: ReportsCarlRoute,
+  ReportsRoute: ReportsRouteWithChildren,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   PlatformPlatformIdRoute: PlatformPlatformIdRoute,
   AgentPlatformIdAgentIdRoute: AgentPlatformIdAgentIdRoute,
-  SitemapDotxmlRoute: SitemapDotxmlRoute,
 }
-
-export const routeTree = rootRouteImport._addFileChildren(rootRouteChildren)
+export const routeTree = rootRouteImport
+  ._addFileChildren(rootRouteChildren)
+  ._addFileTypes<FileRouteTypes>()

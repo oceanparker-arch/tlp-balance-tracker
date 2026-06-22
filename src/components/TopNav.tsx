@@ -80,16 +80,6 @@ export function TopNav({
                 style={{ background: "white", minWidth: 160 }}
               >
                 <Link
-                  to="/reports/jo"
-                  onClick={() => setReportsOpen(false)}
-                  className="block px-4 py-2.5 text-sm hover:bg-secondary transition"
-                  style={{ color: "var(--navy)" }}
-                  activeProps={{ style: { color: "var(--teal)", fontWeight: 600 } }}
-                >
-                  Jo's report
-                </Link>
-                <div style={{ height: 1, background: "var(--color-border-tertiary)" }} />
-                <Link
                   to="/reports/carl"
                   onClick={() => setReportsOpen(false)}
                   className="block px-4 py-2.5 text-sm hover:bg-secondary transition"
@@ -98,6 +88,7 @@ export function TopNav({
                 >
                   Carl's report
                 </Link>
+
               </div>
             )}
           </div>
