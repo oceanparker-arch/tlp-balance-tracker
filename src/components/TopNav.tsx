@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export function TopNav({
   lastUpdated,
@@ -11,6 +11,18 @@ export function TopNav({
 }) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
+  const [reportsOpen, setReportsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setReportsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -18,13 +30,13 @@ export function TopNav({
     try {
       const res = await fetch("http://localhost:5000/api/refresh", { method: "POST" });
       if (res.ok) {
-        setRefreshMsg("✓ Data refreshed");
+        setRefreshMsg("✓ Refreshed");
         setTimeout(() => { setRefreshMsg(null); window.location.reload(); }, 1500);
       } else {
-        setRefreshMsg("Refresh failed");
+        setRefreshMsg("Failed");
       }
     } catch {
-      setRefreshMsg("Server not reachable");
+      setRefreshMsg("Unreachable");
     } finally {
       setRefreshing(false);
     }
@@ -52,17 +64,46 @@ export function TopNav({
           >
             Import data
           </Link>
-          <Link
-            to="/reports"
-            className="text-white/70 hover:text-white"
-            activeProps={{ className: "text-white font-semibold" }}
-          >
-            Reports
-          </Link>
+
+          {/* Reports dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setReportsOpen(o => !o)}
+              className="flex items-center gap-1 text-white/70 hover:text-white transition"
+            >
+              Reports
+              <span style={{ fontSize: 10, marginTop: 1 }}>{reportsOpen ? "▲" : "▼"}</span>
+            </button>
+            {reportsOpen && (
+              <div
+                className="absolute left-0 top-full mt-2 rounded-lg border border-border shadow-lg overflow-hidden z-50"
+                style={{ background: "white", minWidth: 160 }}
+              >
+                <Link
+                  to="/reports/jo"
+                  onClick={() => setReportsOpen(false)}
+                  className="block px-4 py-2.5 text-sm hover:bg-secondary transition"
+                  style={{ color: "var(--navy)" }}
+                  activeProps={{ style: { color: "var(--teal)", fontWeight: 600 } }}
+                >
+                  Jo's report
+                </Link>
+                <div style={{ height: 1, background: "var(--color-border-tertiary)" }} />
+                <Link
+                  to="/reports/carl"
+                  onClick={() => setReportsOpen(false)}
+                  className="block px-4 py-2.5 text-sm hover:bg-secondary transition"
+                  style={{ color: "var(--navy)" }}
+                  activeProps={{ style: { color: "var(--teal)", fontWeight: 600 } }}
+                >
+                  Carl's report
+                </Link>
+              </div>
+            )}
+          </div>
         </nav>
 
         <div className="ml-auto flex items-center gap-4">
-          {/* Refresh button */}
           <button
             onClick={handleRefresh}
             disabled={refreshing}
@@ -80,15 +121,8 @@ export function TopNav({
             {refreshMsg ?? (refreshing ? "Refreshing…" : "Refresh data")}
           </button>
 
-          {/* Live data indicator */}
           <div className="flex items-center gap-1.5 text-xs">
-            <span
-              className="h-2 w-2 rounded-full"
-              style={{
-                background: usingLiveData ? "#27AE60" : "#888",
-                boxShadow: usingLiveData ? "0 0 0 3px rgba(39,174,96,0.25)" : "none",
-              }}
-            />
+            <span className="h-2 w-2 rounded-full" style={{ background: usingLiveData ? "#27AE60" : "#888", boxShadow: usingLiveData ? "0 0 0 3px rgba(39,174,96,0.25)" : "none" }} />
             <span className={usingLiveData ? "text-green-300" : "text-white/40"}>
               {usingLiveData ? "Live data" : "Mock data"}
             </span>
@@ -100,7 +134,6 @@ export function TopNav({
           </div>
         </div>
       </div>
-
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </header>
   );

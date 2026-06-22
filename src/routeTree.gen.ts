@@ -13,6 +13,8 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ImportRouteImport } from './routes/import'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReportsJoRouteImport } from './routes/reports.jo'
+import { Route as ReportsCarlRouteImport } from './routes/reports.carl'
 import { Route as PlatformPlatformIdRouteImport } from './routes/platform.$platformId'
 import { Route as AgentPlatformIdAgentIdRouteImport } from './routes/agent.$platformId.$agentId'
 
@@ -36,6 +38,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReportsJoRoute = ReportsJoRouteImport.update({
+  id: '/jo',
+  path: '/jo',
+  getParentRoute: () => ReportsRoute,
+} as any)
+const ReportsCarlRoute = ReportsCarlRouteImport.update({
+  id: '/carl',
+  path: '/carl',
+  getParentRoute: () => ReportsRoute,
+} as any)
 const PlatformPlatformIdRoute = PlatformPlatformIdRouteImport.update({
   id: '/platform/$platformId',
   path: '/platform/$platformId',
@@ -50,26 +62,32 @@ const AgentPlatformIdAgentIdRoute = AgentPlatformIdAgentIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/import': typeof ImportRoute
-  '/reports': typeof ReportsRoute
+  '/reports': typeof ReportsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/platform/$platformId': typeof PlatformPlatformIdRoute
+  '/reports/carl': typeof ReportsCarlRoute
+  '/reports/jo': typeof ReportsJoRoute
   '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/import': typeof ImportRoute
-  '/reports': typeof ReportsRoute
+  '/reports': typeof ReportsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/platform/$platformId': typeof PlatformPlatformIdRoute
+  '/reports/carl': typeof ReportsCarlRoute
+  '/reports/jo': typeof ReportsJoRoute
   '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/import': typeof ImportRoute
-  '/reports': typeof ReportsRoute
+  '/reports': typeof ReportsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/platform/$platformId': typeof PlatformPlatformIdRoute
+  '/reports/carl': typeof ReportsCarlRoute
+  '/reports/jo': typeof ReportsJoRoute
   '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRouteTypes {
@@ -80,6 +98,8 @@ export interface FileRouteTypes {
     | '/reports'
     | '/sitemap.xml'
     | '/platform/$platformId'
+    | '/reports/carl'
+    | '/reports/jo'
     | '/agent/$platformId/$agentId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -88,6 +108,8 @@ export interface FileRouteTypes {
     | '/reports'
     | '/sitemap.xml'
     | '/platform/$platformId'
+    | '/reports/carl'
+    | '/reports/jo'
     | '/agent/$platformId/$agentId'
   id:
     | '__root__'
@@ -96,13 +118,15 @@ export interface FileRouteTypes {
     | '/reports'
     | '/sitemap.xml'
     | '/platform/$platformId'
+    | '/reports/carl'
+    | '/reports/jo'
     | '/agent/$platformId/$agentId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ImportRoute: typeof ImportRoute
-  ReportsRoute: typeof ReportsRoute
+  ReportsRoute: typeof ReportsRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   PlatformPlatformIdRoute: typeof PlatformPlatformIdRoute
   AgentPlatformIdAgentIdRoute: typeof AgentPlatformIdAgentIdRoute
@@ -138,6 +162,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reports/jo': {
+      id: '/reports/jo'
+      path: '/jo'
+      fullPath: '/reports/jo'
+      preLoaderRoute: typeof ReportsJoRouteImport
+      parentRoute: typeof ReportsRoute
+    }
+    '/reports/carl': {
+      id: '/reports/carl'
+      path: '/carl'
+      fullPath: '/reports/carl'
+      preLoaderRoute: typeof ReportsCarlRouteImport
+      parentRoute: typeof ReportsRoute
+    }
     '/platform/$platformId': {
       id: '/platform/$platformId'
       path: '/platform/$platformId'
@@ -155,10 +193,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ReportsRouteChildren {
+  ReportsCarlRoute: typeof ReportsCarlRoute
+  ReportsJoRoute: typeof ReportsJoRoute
+}
+
+const ReportsRouteChildren: ReportsRouteChildren = {
+  ReportsCarlRoute: ReportsCarlRoute,
+  ReportsJoRoute: ReportsJoRoute,
+}
+
+const ReportsRouteWithChildren =
+  ReportsRoute._addFileChildren(ReportsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ImportRoute: ImportRoute,
-  ReportsRoute: ReportsRoute,
+  ReportsRoute: ReportsRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   PlatformPlatformIdRoute: PlatformPlatformIdRoute,
   AgentPlatformIdAgentIdRoute: AgentPlatformIdAgentIdRoute,
