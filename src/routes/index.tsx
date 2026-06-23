@@ -23,6 +23,7 @@ interface ReviewModalProps {
 }
 
 function ReviewModal({ agent, onClose, onDone }: ReviewModalProps) {
+  if (!agent) return null;
   const [reason, setReason] = React.useState("");
   const [notes, setNotes]   = React.useState("");
   const today    = new Date().toISOString().slice(0, 10);
@@ -579,9 +580,7 @@ function Dashboard() {
     return map;
   });
 
-  const handleReview = React.useCallback((agent: any) => {
-    setReviewingAgent(agent);
-  }, []);
+  const handleReview = (agent: any) => setReviewingAgent(agent);
 
   return (
     <>
