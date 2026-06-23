@@ -152,20 +152,14 @@ function StatCard({ label, value, sub }: { label: string; value: React.ReactNode
   );
 }
 
-function Dashboard() {
+interface DashboardContentProps {
+  onReview: (agent: { platformId: string; agentId: string; agentName: string; platformName: string; latest: { balance: number }; status: string; breakoutPct?: number | null }) => void;
+  doneIds: Record<string, "no_action" | "escalate_carl">;
+}
+
+const DashboardContent = React.memo(function DashboardContent({ onReview, doneIds }: DashboardContentProps) {
   const data = useDashboardData();
-  // Trend alerts: trending down only, sorted by steepest % drop
   const [showAllBreakouts, setShowAllBreakouts] = React.useState(false);
-  const [reviewingAgent, setReviewingAgent] = React.useState<{
-    platformId: string; agentId: string; agentName: string; platformName: string;
-    latest: { balance: number }; status: string; breakoutPct?: number | null;
-  } | null>(null);
-  const [doneIds, setDoneIds] = React.useState<Record<string, "no_action" | "escalate_carl">>(() => {
-    const existing = getJoEntries();
-    const map: Record<string, "no_action" | "escalate_carl"> = {};
-    for (const e of existing) if (e.action) map[e.id] = e.action as any;
-    return map;
-  });
   const today = new Date().toISOString().slice(0, 10);
 
   const [showAllTrends, setShowAllTrends] = React.useState(false);
@@ -339,7 +333,7 @@ function Dashboard() {
                             </span>
                           ) : (
                             <button
-                              onClick={() => setReviewingAgent({ platformId: a.platformId, agentId: a.agentId, agentName: a.agentName, platformName: a.platformName, latest: a.latest, status: a.status, breakoutPct: a.breakoutPct })}
+                              onClick={() => onReview({ platformId: a.platformId, agentId: a.agentId, agentName: a.agentName, platformName: a.platformName, latest: a.latest, status: a.status, breakoutPct: a.breakoutPct })}
                               className="text-xs px-3 py-1 rounded border border-border hover:bg-secondary transition font-medium"
                               style={{ color: "var(--teal)" }}
                             >
@@ -569,6 +563,29 @@ function Dashboard() {
           )}
         </section>
       </main>
+    </div>
+  );
+});
+
+function Dashboard() {
+  const [reviewingAgent, setReviewingAgent] = React.useState<{
+    platformId: string; agentId: string; agentName: string; platformName: string;
+    latest: { balance: number }; status: string; breakoutPct?: number | null;
+  } | null>(null);
+  const [doneIds, setDoneIds] = React.useState<Record<string, "no_action" | "escalate_carl">>(() => {
+    const existing = getJoEntries();
+    const map: Record<string, "no_action" | "escalate_carl"> = {};
+    for (const e of existing) if (e.action) map[e.id] = e.action as any;
+    return map;
+  });
+
+  const handleReview = React.useCallback((agent: any) => {
+    setReviewingAgent(agent);
+  }, []);
+
+  return (
+    <>
+      <DashboardContent onReview={handleReview} doneIds={doneIds} />
       {reviewingAgent && ReactDOM.createPortal(
         <ReviewModal
           agent={reviewingAgent}
@@ -580,6 +597,6 @@ function Dashboard() {
         />,
         document.body
       )}
-    </div>
+    </>
   );
 }
