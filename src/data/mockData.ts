@@ -140,12 +140,19 @@ export function getAllAgentSeries(): AgentSeries[] {
   for (const p of platforms) {
     for (const a of p.agents) {
       const agentId = a.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      const data = generateAgentSeries(`${p.id}:${agentId}`);
+      // Demo: force one agent into an "above band" breakout so the
+      // breakout UI is visible against otherwise in-band mock data.
+      if (p.id === "alto" && agentId === "premier-properties" && data.length) {
+        const last = data[data.length - 1];
+        last.balance = Math.round(last.balance * 3 + 80000);
+      }
       out.push({
         platformId: p.id,
         platformName: p.name,
         agentId,
         agentName: a,
-        data: generateAgentSeries(`${p.id}:${agentId}`),
+        data,
       });
     }
   }
