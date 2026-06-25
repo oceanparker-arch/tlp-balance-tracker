@@ -580,7 +580,7 @@ function Dashboard() {
     return map;
   });
 
-  const handleReview = (agent: any) => setReviewingAgent(agent);
+  const handleReview = React.useCallback((agent: any) => setReviewingAgent(agent), []);
 
   return (
     <>
