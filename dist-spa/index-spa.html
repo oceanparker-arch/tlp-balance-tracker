@@ -222,6 +222,8 @@
     btnRow.appendChild(escalateBtn);
     body.appendChild(btnRow);
     menu.appendChild(body);
+    // Prevent mousedown inside the menu from triggering the dismiss listener
+    menu.addEventListener('mousedown', function(e) { e.stopPropagation(); }, true);
     document.body.appendChild(menu);
     menuEl = menu;
   }
