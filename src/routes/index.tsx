@@ -70,70 +70,35 @@ function ReviewModal({ agent, onClose, onDone }: ReviewModalProps) {
   }
 
   return (
-    <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div style={{ background: "#ffffff", borderRadius: 12, border: "0.5px solid #e5e7eb", width: "100%", maxWidth: 520, boxShadow: "0 8px 32px rgba(0,0,0,0.25)" }}>
-        <div style={{ padding: "16px 20px", borderBottom: "0.5px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: 15, color: "#111" }}>{agent.agentName}</div>
-            <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>
-              {agent.platformName} · {isHigh ? "↑ Above band" : "↓ Below band"} · {agent.breakoutPct != null ? `${agent.breakoutPct >= 0 ? "+" : ""}${Math.abs(agent.breakoutPct).toFixed(1)}%` : ""}
-            </div>
-          </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#666", lineHeight: 1, padding: "4px 8px" }}>×</button>
+    <div style={{ padding: 16 }}>
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ fontSize: 11, fontWeight: 500, color: "#555", display: "block", marginBottom: 4 }}>Reason</label>
+        <select
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px", fontSize: 12, background: "#fff", color: "#111" }}
+          autoFocus
+        >
+          <option value="">Select reason…</option>
+          {reasons.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+      </div>
+      {showNotes && (
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: 11, fontWeight: 500, color: "#555", display: "block", marginBottom: 4 }}>Notes</label>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="Add notes…"
+            rows={2}
+            style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px", fontSize: 12, background: "#fff", color: "#111", resize: "none", boxSizing: "border-box" as const }}
+          />
         </div>
-
-        <div style={{ padding: "20px" }}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: "#555", display: "block", marginBottom: 6 }}>Reason</label>
-            <select
-              value={reason}
-              onChange={e => setReason(e.target.value)}
-              style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 6, padding: "8px 10px", fontSize: 13, background: "#fff", color: "#111" }}
-            >
-              <option value="">Select reason…</option>
-              {reasons.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
-
-          {showNotes && (
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 500, color: "#555", display: "block", marginBottom: 6 }}>Notes</label>
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder="Add notes…"
-                rows={3}
-                style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 6, padding: "8px 10px", fontSize: 13, background: "#fff", color: "#111", resize: "vertical", boxSizing: "border-box" as const }}
-              />
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <button
-              onClick={onClose}
-              style={{ fontSize: 13, padding: "8px 16px", borderRadius: 6, border: "1px solid #d1d5db", background: "none", cursor: "pointer", color: "#111" }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleNoAction}
-              disabled={!reason}
-              style={{ fontSize: 13, padding: "8px 16px", borderRadius: 6, border: "0.5px solid var(--color-border-secondary)", background: "none", cursor: "pointer", color: "var(--color-text-primary)", opacity: reason ? 1 : 0.4 }}
-            >
-              No action required
-            </button>
-            <button
-              onClick={handleEscalate}
-              disabled={!reason || (showNotes && !notes.trim())}
-              style={{ fontSize: 13, padding: "8px 16px", borderRadius: 6, border: "none", background: "#1B2E4B", color: "white", cursor: "pointer", opacity: (!reason || (showNotes && !notes.trim())) ? 0.4 : 1 }}
-            >
-              Escalate to Carl
-            </button>
-          </div>
-        </div>
+      )}
+      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", borderTop: "1px solid #f3f4f6", paddingTop: 12 }}>
+        <button onClick={onClose} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 6, border: "1px solid #d1d5db", background: "none", cursor: "pointer", color: "#555" }}>Cancel</button>
+        <button onClick={handleNoAction} disabled={!reason} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 6, border: "1px solid #d1d5db", background: "none", cursor: "pointer", color: "#111", opacity: reason ? 1 : 0.4 }}>No action</button>
+        <button onClick={handleEscalate} disabled={!reason || (showNotes && !notes.trim())} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 6, border: "none", background: "#1B2E4B", color: "white", cursor: "pointer", opacity: (!reason || (showNotes && !notes.trim())) ? 0.4 : 1 }}>Escalate to Carl</button>
       </div>
     </div>
   );
@@ -164,37 +129,17 @@ function StatCard({ label, value, sub }: { label: string; value: React.ReactNode
 }
 
 interface DashboardContentProps {
-  onReview: (agent: ReviewModalAgent) => void;
+  onContextMenu: (e: React.MouseEvent, agent: ReviewModalAgent) => void;
   doneIds: Record<string, "no_action" | "escalate_carl">;
 }
 
-const DashboardContent = React.memo(function DashboardContent({ onReview, doneIds }: DashboardContentProps) {
+const DashboardContent = React.memo(function DashboardContent({ onContextMenu, doneIds }: DashboardContentProps) {
   const data = useDashboardData();
   const [showAllBreakouts, setShowAllBreakouts] = React.useState(false);
   const today = new Date().toISOString().slice(0, 10);
 
-  const [showAllTrends, setShowAllTrends] = React.useState(false);
-  const [showAllTrendUp, setShowAllTrendUp] = React.useState(false);
 
   // Pre-calculate trendPct for all agents once - avoids recalculating per render
-  const agentsWithTrend = React.useMemo(() =>
-    data.loading ? [] : data.agents.map(a => ({ ...a, trendPct: trendPercentChange(a.raw) })),
-    [data.agents, data.loading]
-  );
-
-  const trendAlerts = React.useMemo(() =>
-    agentsWithTrend
-      .filter((a) => a.trend === "down" && a.latest.mean >= 25000 && a.trendPct <= -15)
-      .sort((a, b) => a.trendPct - b.trendPct),
-    [agentsWithTrend]
-  );
-
-  const trendUpAlerts = React.useMemo(() =>
-    agentsWithTrend
-      .filter((a) => a.trend === "up" && a.latest.mean >= 25000 && a.trendPct >= 15)
-      .sort((a, b) => b.trendPct - a.trendPct),
-    [agentsWithTrend]
-  );
 
   // Breakout alerts sorted by biggest % outside band
   const sortedBreakouts = data.loading
@@ -306,7 +251,8 @@ const DashboardContent = React.memo(function DashboardContent({ onReview, doneId
                     <tr
                       key={`${a.platformId}-${a.agentId}`}
                       className="border-t border-border"
-                      style={{ borderLeft: "3px solid var(--tlp-red)" }}
+                      style={{ borderLeft: "3px solid var(--tlp-red)", cursor: "context-menu" }}
+                      onContextMenu={e => onContextMenu(e, { platformId: a.platformId, agentId: a.agentId, agentName: a.agentName, platformName: a.platformName, balance: a.latest.balance, status: a.status, breakoutPct: a.breakoutPct ?? null })}
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -343,13 +289,7 @@ const DashboardContent = React.memo(function DashboardContent({ onReview, doneId
                               {done === "no_action" ? "No action" : "→ Carl"}
                             </span>
                           ) : (
-                            <button
-                              onClick={() => onReview({ platformId: a.platformId, agentId: a.agentId, agentName: a.agentName, platformName: a.platformName, balance: a.latest.balance, status: a.status, breakoutPct: a.breakoutPct ?? null })}
-                              className="text-xs px-3 py-1 rounded border border-border hover:bg-secondary transition font-medium"
-                              style={{ color: "var(--teal)" }}
-                            >
-                              Review
-                            </button>
+                            <span style={{ fontSize: 11, color: "#999", fontStyle: "italic" }}>Right-click row</span>
                           );
                         })()}
                       </td>
@@ -368,163 +308,12 @@ const DashboardContent = React.memo(function DashboardContent({ onReview, doneId
           )}
         </section>
 
-        {/* Section 3: Trend Alerts — trending down, sorted by steepest drop, within band only */}
-        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
-          <div className="mb-4 flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-text-primary">Trend Alerts</h2>
-            <span
-              className="inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-xs font-semibold text-white"
-              style={{ background: "#C8773A" }}
-            >
-              {data.loading ? "…" : trendAlerts.length}
-            </span>
+        {/* Trends moved to /trends page */}
+        <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-text-secondary">Trend alerts have moved to their own page.</p>
+            <a href="/trends" className="text-sm font-medium hover:underline" style={{ color: "var(--teal)" }}>View trend alerts →</a>
           </div>
-          {data.loading ? (
-            <Skeleton className="h-32" />
-          ) : trendAlerts.length === 0 ? (
-            <div
-              className="rounded-md border px-4 py-6 text-sm"
-              style={{ background: "rgba(39,174,96,0.08)", borderColor: "rgba(39,174,96,0.25)", color: "#1d8049" }}
-            >
-              ✓ No accounts showing a sustained downward trend over the last 90 days.
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-md border border-border">
-              <table className="w-full table-fixed text-sm">
-                <colgroup>
-                  <col className="w-[30%]" />
-                  <col className="w-[20%]" />
-                  <col className="w-[25%]" />
-                  <col className="w-[25%]" />
-                </colgroup>
-                <thead className="bg-secondary text-left text-xs uppercase tracking-wide text-text-secondary">
-                  <tr>
-                    <th className="px-4 py-2.5">Agent</th>
-                    <th className="px-4 py-2.5">Platform</th>
-                    <th className="px-4 py-2.5 text-right">Closing balance</th>
-                    <th className="px-4 py-2.5">90-day trend</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(showAllTrends ? trendAlerts : trendAlerts.slice(0, 10)).map((a) => (
-                    <tr
-                      key={`${a.platformId}-${a.agentId}`}
-                      className="border-t border-border"
-                      style={{ borderLeft: "3px solid #C8773A" }}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            to="/agent/$platformId/$agentId"
-                            params={{ platformId: a.platformId, agentId: a.agentId }}
-                            className="font-semibold hover:underline truncate"
-                            style={{ color: "var(--teal)" }}
-                          >
-                            {a.agentName}
-                          </Link>
-                          {a.isLive && <LiveBadge />}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3"><PlatformBadge name={a.platformName} /></td>
-                      <td className="px-4 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm font-semibold" style={{ color: "#E74C3C" }}>
-                          ↘ {Math.abs(a.trendPct).toFixed(1)}%
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {trendAlerts.length > 10 && (
-                <div className="border-t border-border bg-secondary px-4 py-2 text-right text-xs">
-                  <button onClick={() => setShowAllTrends(s => !s)} className="font-medium hover:underline" style={{ color: "var(--teal)" }}>
-                    {showAllTrends ? "Show less ↑" : `View all ${trendAlerts.length} →`}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
-        {/* Section 4: Trend Up Alerts */}
-        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
-          <div className="mb-4 flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-text-primary">Trending Up (3 months)</h2>
-            <span
-              className="inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-xs font-semibold text-white"
-              style={{ background: "#27AE60" }}
-            >
-              {data.loading ? "…" : trendUpAlerts.length}
-            </span>
-          </div>
-          {data.loading ? (
-            <div className="animate-pulse rounded-md bg-muted h-32" />
-          ) : trendUpAlerts.length === 0 ? (
-            <div
-              className="rounded-md border px-4 py-6 text-sm"
-              style={{ background: "rgba(39,174,96,0.08)", borderColor: "rgba(39,174,96,0.25)", color: "#1d8049" }}
-            >
-              ✓ No accounts showing a significant upward trend over the last 3 months.
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-md border border-border">
-              <table className="w-full table-fixed text-sm">
-                <colgroup>
-                  <col className="w-[30%]" />
-                  <col className="w-[20%]" />
-                  <col className="w-[25%]" />
-                  <col className="w-[25%]" />
-                </colgroup>
-                <thead className="bg-secondary text-left text-xs uppercase tracking-wide text-text-secondary">
-                  <tr>
-                    <th className="px-4 py-2.5">Agent</th>
-                    <th className="px-4 py-2.5">Platform</th>
-                    <th className="px-4 py-2.5 text-right">Closing balance</th>
-                    <th className="px-4 py-2.5">3-month trend</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(showAllTrendUp ? trendUpAlerts : trendUpAlerts.slice(0, 10)).map((a) => (
-                    <tr
-                      key={`${a.platformId}-${a.agentId}`}
-                      className="border-t border-border"
-                      style={{ borderLeft: "3px solid #27AE60" }}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            to="/agent/$platformId/$agentId"
-                            params={{ platformId: a.platformId, agentId: a.agentId }}
-                            className="font-semibold hover:underline truncate"
-                            style={{ color: "var(--teal)" }}
-                          >
-                            {a.agentName}
-                          </Link>
-                          {a.isLive && <LiveBadge />}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3"><PlatformBadge name={a.platformName} /></td>
-                      <td className="px-4 py-3 text-right tabular-nums">{formatGBP(a.latest.balance)}</td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm font-semibold" style={{ color: "#27AE60" }}>
-                          ↗ {Math.abs(a.trendPct).toFixed(1)}%
-                        </span>
-                        <span className="text-xs text-text-secondary ml-1">(3M)</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {trendUpAlerts.length > 10 && (
-                <div className="border-t border-border bg-secondary px-4 py-2 text-right text-xs">
-                  <button onClick={() => setShowAllTrendUp(s => !s)} className="font-medium hover:underline" style={{ color: "var(--teal)" }}>
-                    {showAllTrendUp ? "Show less ↑" : `View all ${trendUpAlerts.length} →`}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </section>
 
         {/* Section 5: Platform overview */}
@@ -537,7 +326,7 @@ const DashboardContent = React.memo(function DashboardContent({ onReview, doneId
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {data.platforms.map((p) => {
-                const pct = agentsWithTrend.find(a => a.platformId === p.id)?.trendPct ?? trendPercentChange(p.raw);
+                const pct = trendPercentChange(p.raw);
                 const pBI = breakoutInfo(p.series);
                 return (
                   <Link
@@ -579,7 +368,16 @@ const DashboardContent = React.memo(function DashboardContent({ onReview, doneId
 });
 
 function Dashboard() {
-  const [reviewingAgent, setReviewingAgent] = React.useState<ReviewModalAgent | null>(null);
+  const [contextMenu, setContextMenu] = React.useState<{
+    x: number; y: number;
+    agent: ReviewModalAgent;
+  } | null>(null);
+
+  React.useEffect(() => {
+    const close = () => setContextMenu(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, []);
   const [doneIds, setDoneIds] = React.useState<Record<string, "no_action" | "escalate_carl">>(() => {
     const existing = getJoEntries();
     const map: Record<string, "no_action" | "escalate_carl"> = {};
@@ -587,20 +385,44 @@ function Dashboard() {
     return map;
   });
 
-  const handleReview = React.useCallback((agent: any) => setReviewingAgent(agent), []);
-
   return (
     <>
-      <DashboardContent onReview={handleReview} doneIds={doneIds} />
-      {reviewingAgent && ReactDOM.createPortal(
-        <ReviewModal
-          agent={reviewingAgent}
-          onClose={() => setReviewingAgent(null)}
-          onDone={(entry) => {
-            setDoneIds(prev => ({ ...prev, [entry.id]: entry.action as any }));
-            setReviewingAgent(null);
+      <DashboardContent
+        onContextMenu={(e, agent) => {
+          e.preventDefault();
+          setContextMenu({ x: e.clientX, y: e.clientY, agent });
+        }}
+        doneIds={doneIds}
+      />
+      {contextMenu && ReactDOM.createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: contextMenu.y,
+            left: contextMenu.x,
+            background: '#fff',
+            border: '1px solid #e5e7eb',
+            borderRadius: 8,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+            zIndex: 9999,
+            minWidth: 200,
+            overflow: 'hidden',
           }}
-        />,
+          onClick={e => e.stopPropagation()}
+        >
+          <div style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6' }}>
+            <div style={{ fontWeight: 600, fontSize: 13, color: '#111' }}>{contextMenu.agent.agentName}</div>
+            <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>{contextMenu.agent.platformName} · {contextMenu.agent.status === 'above' ? '↑ Above band' : '↓ Below band'}</div>
+          </div>
+          <ReviewModal
+            agent={contextMenu.agent}
+            onClose={() => setContextMenu(null)}
+            onDone={(entry) => {
+              setDoneIds(prev => ({ ...prev, [entry.id]: entry.action as any }));
+              setContextMenu(null);
+            }}
+          />
+        </div>,
         document.body
       )}
     </>

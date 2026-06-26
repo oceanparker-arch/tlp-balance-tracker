@@ -64,6 +64,13 @@ export function TopNav({
           >
             Import data
           </Link>
+          <Link
+            to="/trends"
+            className="text-white/70 hover:text-white"
+            activeProps={{ className: "text-white font-semibold" }}
+          >
+            Trends
+          </Link>
 
           {/* Reports dropdown */}
           <div className="relative" ref={dropdownRef}>
