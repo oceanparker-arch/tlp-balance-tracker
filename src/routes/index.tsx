@@ -202,7 +202,7 @@ const DashboardContent = React.memo(function DashboardContent({ onReview, doneId
     : [...data.breakouts].sort((a, b) => (b.breakoutPct ?? 0) - (a.breakoutPct ?? 0));
 
   const aggLatest = data.aggregateLatest;
-  const aggPct = data.loading ? 0 : trendPercentChange(data.aggregate);
+  const aggPct = React.useMemo(() => data.loading ? 0 : trendPercentChange(data.aggregate), [data.aggregate, data.loading]);
   const aggTrend = aggPct > 5 ? "up" : aggPct < -5 ? "down" : "flat";
   const aggBreakout = data.loading ? null : breakoutInfo(data.aggregate);
 
@@ -256,7 +256,7 @@ const DashboardContent = React.memo(function DashboardContent({ onReview, doneId
           )}
 
           {data.loading ? <Skeleton className="h-[320px]" /> : (
-            <BollingerChart data={data.aggregate} height={320} agentName="tlp-aggregate" />
+            <BollingerChart data={data.aggregate} height={320} agentName="tlp-aggregate" disableTooltip />
           )}
         </section>
 

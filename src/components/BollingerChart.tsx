@@ -12,6 +12,7 @@ interface Props {
   height?: number;
   showWdAxis?: boolean;
   agentName?: string; // for export filename
+  disableTooltip?: boolean;
 }
 
 interface ChartPoint extends BollingerPoint {
@@ -30,7 +31,7 @@ function downloadCSV(data: BollingerPoint[], filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function BollingerChart({ data, height = 320, showWdAxis = false, agentName }: Props) {
+export function BollingerChart({ data, height = 320, showWdAxis = false, agentName, disableTooltip = false }: Props) {
   const chartData: ChartPoint[] = useMemo(
     () => data.map((d) => ({ ...d, band: [d.lower, d.upper] as [number, number] })),
     [data],
@@ -107,7 +108,7 @@ export function BollingerChart({ data, height = 320, showWdAxis = false, agentNa
               axisLine={false}
               width={60}
             />
-            <Tooltip
+            {!disableTooltip && <Tooltip
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const p = payload[0].payload as BollingerPoint;
@@ -127,7 +128,7 @@ export function BollingerChart({ data, height = 320, showWdAxis = false, agentNa
                   </div>
                 );
               }}
-            />
+            />}
 
             {/* Band fill — only between lower and upper */}
             <Area
