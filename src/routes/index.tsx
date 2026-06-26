@@ -16,8 +16,18 @@ import { HIGH_REASONS, LOW_REASONS, getJoEntries, saveJoEntries, escalateToCarl,
 
 
 // ── Review Modal ─────────────────────────────────────────────────────────────
+interface ReviewModalAgent {
+  platformId: string;
+  agentId: string;
+  agentName: string;
+  platformName: string;
+  balance: number;
+  status: string;
+  breakoutPct: number | null;
+}
+
 interface ReviewModalProps {
-  agent: { platformId: string; agentId: string; agentName: string; platformName: string; latest: { balance: number }; status: string; breakoutPct?: number | null; };
+  agent: ReviewModalAgent;
   onClose: () => void;
   onDone: (entry: JoEntry) => void;
 }
@@ -38,7 +48,7 @@ function ReviewModal({ agent, onClose, onDone }: ReviewModalProps) {
       agentId: agent.agentId, agentName: agent.agentName,
       platformId: agent.platformId, platformName: agent.platformName,
       alertType: isHigh ? "above_band" : "below_band",
-      balance: agent.latest.balance, variancePct: agent.breakoutPct ?? 0,
+      balance: agent.balance, variancePct: agent.breakoutPct ?? 0,
       reason, notes, action, passedToCarl: action === "escalate_carl",
       passedToCarlAt: action === "escalate_carl" ? new Date().toISOString() : undefined,
     };
@@ -69,7 +79,7 @@ function ReviewModal({ agent, onClose, onDone }: ReviewModalProps) {
           <div>
             <div style={{ fontWeight: 600, fontSize: 15, color: "#111" }}>{agent.agentName}</div>
             <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>
-              {agent.platformName} · {isHigh ? "↑ Above band" : "↓ Below band"} · {agent.breakoutPct != null ? `${agent.breakoutPct >= 0 ? "+" : ""}${agent.breakoutPct.toFixed(1)}%` : ""}
+              {agent.platformName} · {isHigh ? "↑ Above band" : "↓ Below band"} · {agent.breakoutPct != null ? `${agent.breakoutPct >= 0 ? "+" : ""}${Math.abs(agent.breakoutPct).toFixed(1)}%` : ""}
             </div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#666", lineHeight: 1, padding: "4px 8px" }}>×</button>
@@ -154,7 +164,7 @@ function StatCard({ label, value, sub }: { label: string; value: React.ReactNode
 }
 
 interface DashboardContentProps {
-  onReview: (agent: { platformId: string; agentId: string; agentName: string; platformName: string; latest: { balance: number }; status: string; breakoutPct?: number | null }) => void;
+  onReview: (agent: ReviewModalAgent) => void;
   doneIds: Record<string, "no_action" | "escalate_carl">;
 }
 
@@ -334,7 +344,7 @@ const DashboardContent = React.memo(function DashboardContent({ onReview, doneId
                             </span>
                           ) : (
                             <button
-                              onClick={() => onReview({ platformId: a.platformId, agentId: a.agentId, agentName: a.agentName, platformName: a.platformName, latest: a.latest, status: a.status, breakoutPct: a.breakoutPct })}
+                              onClick={() => onReview({ platformId: a.platformId, agentId: a.agentId, agentName: a.agentName, platformName: a.platformName, balance: a.latest.balance, status: a.status, breakoutPct: a.breakoutPct ?? null })}
                               className="text-xs px-3 py-1 rounded border border-border hover:bg-secondary transition font-medium"
                               style={{ color: "var(--teal)" }}
                             >
@@ -569,10 +579,7 @@ const DashboardContent = React.memo(function DashboardContent({ onReview, doneId
 });
 
 function Dashboard() {
-  const [reviewingAgent, setReviewingAgent] = React.useState<{
-    platformId: string; agentId: string; agentName: string; platformName: string;
-    latest: { balance: number }; status: string; breakoutPct?: number | null;
-  } | null>(null);
+  const [reviewingAgent, setReviewingAgent] = React.useState<ReviewModalAgent | null>(null);
   const [doneIds, setDoneIds] = React.useState<Record<string, "no_action" | "escalate_carl">>(() => {
     const existing = getJoEntries();
     const map: Record<string, "no_action" | "escalate_carl"> = {};
