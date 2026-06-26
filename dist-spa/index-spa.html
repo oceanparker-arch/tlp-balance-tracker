@@ -117,11 +117,11 @@
       'width:300px',
       'font-family:system-ui,sans-serif',
       'font-size:13px',
-      'overflow:hidden'
+      'overflow:visible'
     ].join(';');
 
     var left = Math.min(x, window.innerWidth  - 316);
-    var top  = Math.min(y, window.innerHeight - 300);
+    var top  = Math.min(y, window.innerHeight - 380);
     menu.style.left = left + 'px';
     menu.style.top  = top  + 'px';
 
@@ -222,8 +222,6 @@
     btnRow.appendChild(escalateBtn);
     body.appendChild(btnRow);
     menu.appendChild(body);
-    // Prevent mousedown inside the menu from triggering the dismiss listener
-    menu.addEventListener('mousedown', function(e) { e.stopPropagation(); }, true);
     document.body.appendChild(menu);
     menuEl = menu;
   }
@@ -239,9 +237,12 @@
 
     document.addEventListener('mousedown', function (e) {
       if (!menuEl) return;
-      if (menuEl.contains(e.target)) return;
+      // Use composedPath for shadow DOM compatibility and reliability
+      var path = e.composedPath ? e.composedPath() : [];
+      var insideMenu = path.indexOf(menuEl) >= 0 || menuEl.contains(e.target);
+      if (insideMenu) return;
       removeMenu();
-    }, true);
+    });
 
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') removeMenu();
