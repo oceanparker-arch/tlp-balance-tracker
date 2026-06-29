@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useDashboardData } from "@/data/useDashboardData";
 import { TopNav } from "@/components/TopNav";
@@ -7,6 +7,11 @@ import { BollingerChart, ChartLegend } from "@/components/BollingerChart";
 import { StatusPill, TrendArrow } from "@/components/StatusPill";
 import { formatGBP } from "@/lib/format";
 import { trendPercentChange, breakoutInfo } from "@/data/bollinger";
+import {
+  HIGH_REASONS, LOW_REASONS, alertTypeLabel,
+  getJoEntries, saveJoEntries, escalateToCarl,
+  type JoEntry,
+} from "@/data/reportingData";
 
 export const Route = createFileRoute("/agent/$platformId/$agentId")({
   head: () => ({
@@ -132,6 +137,11 @@ function AgentPage() {
               />
             </section>
 
+            {(agent.status === "above" || agent.status === "below") && (
+              <ReviewSection agent={agent} />
+            )}
+
+
             <section className="rounded-lg border border-border bg-card shadow-sm">
               <button
                 onClick={() => setShowRaw((s) => !s)}
@@ -183,3 +193,173 @@ function AgentPage() {
     </div>
   );
 }
+
+type AgentLike = NonNullable<ReturnType<typeof useDashboardData>["agents"][number]>;
+
+function ReviewSection({ agent }: { agent: AgentLike }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const info = breakoutInfo(agent.series);
+  const isHigh = agent.status === "above";
+  const alertType: JoEntry["alertType"] = isHigh ? "above_band" : "below_band";
+  const variancePct = info?.pct ?? 0;
+  const id = `jo-${today}-${agent.platformId}-${agent.agentId}-band`;
+
+  const [entry, setEntry] = useState<JoEntry | null>(null);
+  const [reason, setReason] = useState("");
+  const [notes, setNotes] = useState("");
+  const [editing, setEditing] = useState(true);
+
+  useEffect(() => {
+    const existing = getJoEntries().find((e) => e.id === id);
+    if (existing) {
+      setEntry(existing);
+      setReason(existing.reason);
+      setNotes(existing.notes);
+      setEditing(existing.action === "");
+    } else {
+      setEntry(null);
+      setReason("");
+      setNotes("");
+      setEditing(true);
+    }
+  }, [id]);
+
+  const reasons = isHigh ? HIGH_REASONS : LOW_REASONS;
+  const showNotes = reason === "Other" || reason === "Potential fraud";
+
+  function buildEntry(): JoEntry {
+    return entry ?? {
+      id, date: today,
+      agentId: agent.agentId, agentName: agent.agentName,
+      platformId: agent.platformId, platformName: agent.platformName,
+      alertType, balance: agent.latest.balance, variancePct,
+      reason: "", notes: "", action: "", passedToCarl: false,
+    };
+  }
+
+  function persist(updated: JoEntry) {
+    const all = getJoEntries().filter((e) => e.id !== updated.id);
+    saveJoEntries([...all, updated]);
+    setEntry(updated);
+  }
+
+  function handleEscalate() {
+    const updated: JoEntry = {
+      ...buildEntry(), reason, notes,
+      action: "escalate_carl", passedToCarl: true,
+      passedToCarlAt: new Date().toISOString(),
+    };
+    persist(updated);
+    escalateToCarl(updated);
+    setEditing(false);
+  }
+
+  function handleNoAction() {
+    const updated: JoEntry = {
+      ...buildEntry(), reason, notes,
+      action: "no_action", passedToCarl: false,
+    };
+    persist(updated);
+    setEditing(false);
+  }
+
+  const borderColor = !editing
+    ? entry?.action === "no_action" ? "#27AE60" : "#2E7D8A"
+    : isHigh ? "#C8773A" : "#E74C3C";
+
+  const varianceText = `${variancePct >= 0 ? "+" : ""}${variancePct.toFixed(1)}%`;
+
+  return (
+    <section
+      className="rounded-lg border border-border bg-card shadow-sm overflow-hidden"
+      style={{ borderLeft: `4px solid ${borderColor}` }}
+    >
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+        <div className="flex items-center gap-3">
+          <h2 className="text-base font-semibold text-text-primary">Review this alert</h2>
+          <span style={{
+            fontSize: 11, padding: "2px 8px", borderRadius: 4, fontWeight: 500,
+            background: isHigh ? "rgba(200,119,58,0.13)" : "rgba(231,76,60,0.12)",
+            color: isHigh ? "#C8773A" : "#E74C3C",
+          }}>
+            {alertTypeLabel(alertType)} · {varianceText}
+          </span>
+        </div>
+        {!editing && entry && (
+          <span style={{
+            fontSize: 11, padding: "2px 8px", borderRadius: 4, fontWeight: 500,
+            background: entry.action === "no_action" ? "rgba(39,174,96,0.12)" : "rgba(46,125,138,0.12)",
+            color: entry.action === "no_action" ? "#1E8449" : "#2E7D8A",
+          }}>
+            {entry.action === "no_action" ? "No action required" : "Escalated to Carl"}
+          </span>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="px-5 py-4 space-y-3">
+          <div>
+            <label className="text-xs font-medium text-text-secondary mb-1 block">Reason</label>
+            <select
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full max-w-md border border-border rounded px-3 py-1.5 text-sm bg-card text-text-primary"
+            >
+              <option value="">Select reason…</option>
+              {reasons.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+
+          {showNotes && (
+            <div>
+              <label className="text-xs font-medium text-text-secondary mb-1 block">Notes</label>
+              <textarea
+                rows={3}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Add notes…"
+                className="w-full border border-border rounded px-3 py-2 text-sm bg-card text-text-primary resize-y"
+              />
+            </div>
+          )}
+
+          {reason && (
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={handleNoAction}
+                className="text-xs px-4 py-2 rounded border border-border hover:bg-secondary transition"
+              >
+                No action required
+              </button>
+              <button
+                onClick={handleEscalate}
+                disabled={showNotes && !notes.trim()}
+                className="text-xs px-4 py-2 rounded text-white font-medium disabled:opacity-40"
+                style={{ background: "#1B2E4B" }}
+              >
+                Escalate to Carl
+              </button>
+            </div>
+          )}
+        </div>
+      ) : entry ? (
+        <div className="px-5 py-4 flex items-start justify-between gap-4">
+          <div className="text-sm">
+            <div><span className="text-text-secondary text-xs">Reason: </span>{entry.reason || "—"}</div>
+            {entry.notes && (
+              <div className="mt-1"><span className="text-text-secondary text-xs">Notes: </span>{entry.notes}</div>
+            )}
+          </div>
+          <button
+            onClick={() => setEditing(true)}
+            className="text-xs hover:underline"
+            style={{ color: "var(--teal)" }}
+          >
+            Edit
+          </button>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+

@@ -9,16 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TrendsRouteImport } from './routes/trends'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ImportRouteImport } from './routes/import'
-import { Route as TrendsRouteImport } from './routes/trends'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ReportsJoRouteImport } from './routes/reports.jo'
 import { Route as ReportsCarlRouteImport } from './routes/reports.carl'
 import { Route as PlatformPlatformIdRouteImport } from './routes/platform.$platformId'
 import { Route as AgentPlatformIdAgentIdRouteImport } from './routes/agent.$platformId.$agentId'
 
+const TrendsRoute = TrendsRouteImport.update({
+  id: '/trends',
+  path: '/trends',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -29,12 +33,6 @@ const ReportsRoute = ReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TrendsRoute = TrendsRouteImport.update({
-  id: '/trends',
-  path: '/trends',
-  getParentRoute: () => rootRouteImport,
-} as any)
-
 const ImportRoute = ImportRouteImport.update({
   id: '/import',
   path: '/import',
@@ -44,11 +42,6 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const ReportsJoRoute = ReportsJoRouteImport.update({
-  id: '/jo',
-  path: '/jo',
-  getParentRoute: () => ReportsRoute,
 } as any)
 const ReportsCarlRoute = ReportsCarlRouteImport.update({
   id: '/carl',
@@ -69,35 +62,32 @@ const AgentPlatformIdAgentIdRoute = AgentPlatformIdAgentIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/import': typeof ImportRoute
-  '/trends': typeof TrendsRoute
   '/reports': typeof ReportsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/trends': typeof TrendsRoute
   '/platform/$platformId': typeof PlatformPlatformIdRoute
   '/reports/carl': typeof ReportsCarlRoute
-  '/reports/jo': typeof ReportsJoRoute
   '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/import': typeof ImportRoute
-  '/trends': typeof TrendsRoute
   '/reports': typeof ReportsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/trends': typeof TrendsRoute
   '/platform/$platformId': typeof PlatformPlatformIdRoute
   '/reports/carl': typeof ReportsCarlRoute
-  '/reports/jo': typeof ReportsJoRoute
   '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/import': typeof ImportRoute
-  '/trends': typeof TrendsRoute
   '/reports': typeof ReportsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/trends': typeof TrendsRoute
   '/platform/$platformId': typeof PlatformPlatformIdRoute
   '/reports/carl': typeof ReportsCarlRoute
-  '/reports/jo': typeof ReportsJoRoute
   '/agent/$platformId/$agentId': typeof AgentPlatformIdAgentIdRoute
 }
 export interface FileRouteTypes {
@@ -107,9 +97,9 @@ export interface FileRouteTypes {
     | '/import'
     | '/reports'
     | '/sitemap.xml'
+    | '/trends'
     | '/platform/$platformId'
     | '/reports/carl'
-    | '/reports/jo'
     | '/agent/$platformId/$agentId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -117,9 +107,9 @@ export interface FileRouteTypes {
     | '/import'
     | '/reports'
     | '/sitemap.xml'
+    | '/trends'
     | '/platform/$platformId'
     | '/reports/carl'
-    | '/reports/jo'
     | '/agent/$platformId/$agentId'
   id:
     | '__root__'
@@ -127,9 +117,9 @@ export interface FileRouteTypes {
     | '/import'
     | '/reports'
     | '/sitemap.xml'
+    | '/trends'
     | '/platform/$platformId'
     | '/reports/carl'
-    | '/reports/jo'
     | '/agent/$platformId/$agentId'
   fileRoutesById: FileRoutesById
 }
@@ -138,12 +128,20 @@ export interface RootRouteChildren {
   ImportRoute: typeof ImportRoute
   ReportsRoute: typeof ReportsRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TrendsRoute: typeof TrendsRoute
   PlatformPlatformIdRoute: typeof PlatformPlatformIdRoute
   AgentPlatformIdAgentIdRoute: typeof AgentPlatformIdAgentIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/trends': {
+      id: '/trends'
+      path: '/trends'
+      fullPath: '/trends'
+      preLoaderRoute: typeof TrendsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -156,13 +154,6 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/trends': {
-      id: '/trends'
-      path: '/trends'
-      fullPath: '/trends'
-      preLoaderRoute: typeof TrendsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/import': {
@@ -178,13 +169,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/reports/jo': {
-      id: '/reports/jo'
-      path: '/jo'
-      fullPath: '/reports/jo'
-      preLoaderRoute: typeof ReportsJoRouteImport
-      parentRoute: typeof ReportsRoute
     }
     '/reports/carl': {
       id: '/reports/carl'
@@ -212,12 +196,10 @@ declare module '@tanstack/react-router' {
 
 interface ReportsRouteChildren {
   ReportsCarlRoute: typeof ReportsCarlRoute
-  ReportsJoRoute: typeof ReportsJoRoute
 }
 
 const ReportsRouteChildren: ReportsRouteChildren = {
   ReportsCarlRoute: ReportsCarlRoute,
-  ReportsJoRoute: ReportsJoRoute,
 }
 
 const ReportsRouteWithChildren =
@@ -225,10 +207,10 @@ const ReportsRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  TrendsRoute: TrendsRoute,
   ImportRoute: ImportRoute,
   ReportsRoute: ReportsRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TrendsRoute: TrendsRoute,
   PlatformPlatformIdRoute: PlatformPlatformIdRoute,
   AgentPlatformIdAgentIdRoute: AgentPlatformIdAgentIdRoute,
 }
