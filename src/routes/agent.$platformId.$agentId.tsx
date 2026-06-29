@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useDashboardData } from "@/data/useDashboardData";
 import { TopNav } from "@/components/TopNav";
@@ -7,6 +7,11 @@ import { BollingerChart, ChartLegend } from "@/components/BollingerChart";
 import { StatusPill, TrendArrow } from "@/components/StatusPill";
 import { formatGBP } from "@/lib/format";
 import { trendPercentChange, breakoutInfo } from "@/data/bollinger";
+import {
+  HIGH_REASONS, LOW_REASONS, alertTypeLabel,
+  getJoEntries, saveJoEntries, escalateToCarl,
+  type JoEntry,
+} from "@/data/reportingData";
 
 export const Route = createFileRoute("/agent/$platformId/$agentId")({
   head: () => ({
