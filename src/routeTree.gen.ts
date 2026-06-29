@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TrendsRouteImport } from './routes/trends'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ImportRouteImport } from './routes/import'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ReportsCarlRouteImport } from './routes/reports.carl'
@@ -26,11 +25,6 @@ const TrendsRoute = TrendsRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReportsRoute = ReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImportRoute = ImportRouteImport.update({
@@ -62,7 +56,6 @@ const AgentPlatformIdAgentIdRoute = AgentPlatformIdAgentIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/import': typeof ImportRoute
-  '/reports': typeof ReportsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/trends': typeof TrendsRoute
   '/platform/$platformId': typeof PlatformPlatformIdRoute
@@ -72,7 +65,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/import': typeof ImportRoute
-  '/reports': typeof ReportsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/trends': typeof TrendsRoute
   '/platform/$platformId': typeof PlatformPlatformIdRoute
@@ -83,7 +75,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/import': typeof ImportRoute
-  '/reports': typeof ReportsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/trends': typeof TrendsRoute
   '/platform/$platformId': typeof PlatformPlatformIdRoute
@@ -95,7 +86,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/import'
-    | '/reports'
     | '/sitemap.xml'
     | '/trends'
     | '/platform/$platformId'
@@ -105,7 +95,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/import'
-    | '/reports'
     | '/sitemap.xml'
     | '/trends'
     | '/platform/$platformId'
@@ -115,7 +104,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/import'
-    | '/reports'
     | '/sitemap.xml'
     | '/trends'
     | '/platform/$platformId'
@@ -126,10 +114,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ImportRoute: typeof ImportRoute
-  ReportsRoute: typeof ReportsRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TrendsRoute: typeof TrendsRoute
   PlatformPlatformIdRoute: typeof PlatformPlatformIdRoute
+  ReportsCarlRoute: typeof ReportsCarlRoute
   AgentPlatformIdAgentIdRoute: typeof AgentPlatformIdAgentIdRoute
 }
 
@@ -149,13 +137,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/reports': {
-      id: '/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof ReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/import': {
       id: '/import'
       path: '/import'
@@ -172,10 +153,10 @@ declare module '@tanstack/react-router' {
     }
     '/reports/carl': {
       id: '/reports/carl'
-      path: '/carl'
+      path: '/reports/carl'
       fullPath: '/reports/carl'
       preLoaderRoute: typeof ReportsCarlRouteImport
-      parentRoute: typeof ReportsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/platform/$platformId': {
       id: '/platform/$platformId'
@@ -194,27 +175,25 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface ReportsRouteChildren {
-  ReportsCarlRoute: typeof ReportsCarlRoute
-}
-
-const ReportsRouteChildren: ReportsRouteChildren = {
-  ReportsCarlRoute: ReportsCarlRoute,
-}
-
-const ReportsRouteWithChildren =
-  ReportsRoute._addFileChildren(ReportsRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ImportRoute: ImportRoute,
-  ReportsRoute: ReportsRouteWithChildren,
-  ReportsCarlRoute: ReportsCarlRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TrendsRoute: TrendsRoute,
   PlatformPlatformIdRoute: PlatformPlatformIdRoute,
+  ReportsCarlRoute: ReportsCarlRoute,
   AgentPlatformIdAgentIdRoute: AgentPlatformIdAgentIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
