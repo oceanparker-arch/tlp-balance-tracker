@@ -137,6 +137,11 @@ function AgentPage() {
               />
             </section>
 
+            {(agent.status === "above" || agent.status === "below") && (
+              <ReviewSection agent={agent} />
+            )}
+
+
             <section className="rounded-lg border border-border bg-card shadow-sm">
               <button
                 onClick={() => setShowRaw((s) => !s)}
