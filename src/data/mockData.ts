@@ -143,7 +143,7 @@ export function getAllAgentSeries(): AgentSeries[] {
       const data = generateAgentSeries(`${p.id}:${agentId}`);
       // Demo: force one agent into an "above band" breakout so the
       // breakout UI is visible against otherwise in-band mock data.
-      if (p.id === "alto" && agentId === "premier-properties" && data.length) {
+      if (p.id === "alto" && agentId === "boulton-griffiths" && data.length) {
         const last = data[data.length - 1];
         last.balance = Math.round(last.balance * 3 + 80000);
       }
