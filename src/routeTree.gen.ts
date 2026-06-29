@@ -44,9 +44,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReportsCarlRoute = ReportsCarlRouteImport.update({
-  id: '/carl',
-  path: '/carl',
-  getParentRoute: () => ReportsRoute,
+  id: '/reports/carl',
+  path: '/reports/carl',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PlatformPlatformIdRoute = PlatformPlatformIdRouteImport.update({
   id: '/platform/$platformId',
@@ -209,6 +209,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ImportRoute: ImportRoute,
   ReportsRoute: ReportsRouteWithChildren,
+  ReportsCarlRoute: ReportsCarlRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TrendsRoute: TrendsRoute,
   PlatformPlatformIdRoute: PlatformPlatformIdRoute,
