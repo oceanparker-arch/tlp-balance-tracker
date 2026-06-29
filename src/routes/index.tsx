@@ -35,11 +35,9 @@ interface ReviewModalProps {
 function ReviewModal({ agent, onClose, onDone }: ReviewModalProps) {
   if (!agent) return null;
   const [reason, setReason] = React.useState("");
-  const [notes, setNotes]   = React.useState("");
   const today    = new Date().toISOString().slice(0, 10);
   const isHigh   = agent.status === "above";
   const reasons  = isHigh ? HIGH_REASONS : LOW_REASONS;
-  const showNotes = reason === "Other" || reason === "Potential fraud";
   const entryId  = `jo-${today}-${agent.platformId}-${agent.agentId}-band`;
 
   function buildEntry(action: "escalate_carl" | "no_action"): JoEntry {
@@ -49,7 +47,7 @@ function ReviewModal({ agent, onClose, onDone }: ReviewModalProps) {
       platformId: agent.platformId, platformName: agent.platformName,
       alertType: isHigh ? "above_band" : "below_band",
       balance: agent.balance, variancePct: agent.breakoutPct ?? 0,
-      reason, notes, action, passedToCarl: action === "escalate_carl",
+      reason, notes: "", action, passedToCarl: action === "escalate_carl",
       passedToCarlAt: action === "escalate_carl" ? new Date().toISOString() : undefined,
     };
   }
@@ -83,22 +81,10 @@ function ReviewModal({ agent, onClose, onDone }: ReviewModalProps) {
           {reasons.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
-      {showNotes && (
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 11, fontWeight: 500, color: "#555", display: "block", marginBottom: 4 }}>Notes</label>
-          <textarea
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            placeholder="Add notes…"
-            rows={2}
-            style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 8px", fontSize: 12, background: "#fff", color: "#111", resize: "none", boxSizing: "border-box" as const }}
-          />
-        </div>
-      )}
       <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", borderTop: "1px solid #f3f4f6", paddingTop: 12 }}>
         <button onClick={onClose} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 6, border: "1px solid #d1d5db", background: "none", cursor: "pointer", color: "#555" }}>Cancel</button>
         <button onClick={handleNoAction} disabled={!reason} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 6, border: "1px solid #d1d5db", background: "none", cursor: "pointer", color: "#111", opacity: reason ? 1 : 0.4 }}>No action</button>
-        <button onClick={handleEscalate} disabled={!reason || (showNotes && !notes.trim())} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 6, border: "none", background: "#1B2E4B", color: "white", cursor: "pointer", opacity: (!reason || (showNotes && !notes.trim())) ? 0.4 : 1 }}>Escalate to Carl</button>
+        <button onClick={handleEscalate} disabled={!reason} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 6, border: "none", background: "#1B2E4B", color: "white", cursor: "pointer", opacity: !reason ? 0.4 : 1 }}>Escalate to Carl</button>
       </div>
     </div>
   );
