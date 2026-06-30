@@ -8,13 +8,13 @@ export interface BollingerPoint extends DataPoint {
   breakout: "above" | "below" | null;
 }
 
-// ── Fast Bollinger calculation ─────────────────────────────────────────────
-// Pre-computes per-WD stats once using last 12 months of data,
-// then applies them to all points in O(n) rather than O(n²).
+// ── Rolling Bollinger calculation ──────────────────────────────────────────
+// For each point, bands are computed from the trailing `windowMonths` of data
+// at the same working-day position. As new data arrives, bands recalculate
+// dynamically per point — no fixed one-shot window.
 
-function stdDev(vals: number[]): number {
+function stdDev(vals: number[], m: number): number {
   if (vals.length < 2) return 0;
-  const m = vals.reduce((s, v) => s + v, 0) / vals.length;
   const variance = vals.reduce((s, v) => s + (v - m) ** 2, 0) / (vals.length - 1);
   return Math.sqrt(variance);
 }
@@ -23,40 +23,25 @@ function mean(vals: number[]): number {
   return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
 }
 
-export function computeBollinger(data: DataPoint[]): BollingerPoint[] {
+export function computeBollinger(
+  data: DataPoint[],
+  windowMonths = 12,
+  stdMultiplier = 2,
+): BollingerPoint[] {
   if (!data.length) return [];
 
-  // Use last 12 months of data for band calculation
-  const latest = data[data.length - 1].date;
-  const cutoffDate = new Date(latest);
-  cutoffDate.setMonth(cutoffDate.getMonth() - 12);
-  const cutoff = cutoffDate.toISOString().slice(0, 10);
-
-  // Group non-zero values by WD position within the 12-month window
-  const wdGroups = new Map<number, number[]>();
+  // Index non-zero balances by working-day position, sorted by timestamp.
+  const byWd = new Map<number, { ts: number; balance: number }[]>();
   for (const d of data) {
-    if (d.date >= cutoff && d.balance > 0) {
-      const arr = wdGroups.get(d.wd) ?? [];
-      arr.push(d.balance);
-      wdGroups.set(d.wd, arr);
-    }
+    if (d.balance <= 0) continue;
+    const arr = byWd.get(d.wd) ?? [];
+    arr.push({ ts: d.ts, balance: d.balance });
+    byWd.set(d.wd, arr);
   }
+  for (const arr of byWd.values()) arr.sort((a, b) => a.ts - b.ts);
 
-  // Pre-compute bands per WD position
-  const wdBands = new Map<number, { mean: number; upper: number; lower: number }>();
-  for (const [wd, vals] of wdGroups) {
-    const m     = mean(vals);
-    const s     = stdDev(vals);
-    const floor = m >= 5000 ? m * 0.20 : 0;
-    wdBands.set(wd, {
-      mean:  m,
-      upper: m + 2 * s,
-      lower: Math.max(m - 2 * s, floor),
-    });
-  }
-
-  // Trendline — simple linear regression on last 365 non-zero points
-  const trendSlice = data.filter(d => d.balance > 0).slice(-365);
+  // Trendline — linear regression on last 365 non-zero points.
+  const trendSlice = data.filter((d) => d.balance > 0).slice(-365);
   let slope = 0, intercept = 0;
   const trendStartIdx = data.length - trendSlice.length;
   if (trendSlice.length >= 2) {
@@ -70,28 +55,44 @@ export function computeBollinger(data: DataPoint[]): BollingerPoint[] {
     intercept = (sumY - slope * sumX) / n;
   }
 
-  // Apply to all points in a single pass
   return data.map((d, i) => {
-    const bands = wdBands.get(d.wd) ?? { mean: d.balance, upper: d.balance, lower: 0 };
+    // Trailing window ending at this point's date.
+    const cutoffDate = new Date(d.ts);
+    cutoffDate.setMonth(cutoffDate.getMonth() - windowMonths);
+    const cutoffTs = cutoffDate.getTime();
+
+    const wdPoints = byWd.get(d.wd) ?? [];
+    const vals: number[] = [];
+    for (const p of wdPoints) {
+      if (p.ts > d.ts) break;
+      if (p.ts >= cutoffTs) vals.push(p.balance);
+    }
+
+    const m     = vals.length ? mean(vals) : d.balance;
+    const s     = stdDev(vals, m);
+    const floor = m >= 5000 ? m * 0.20 : 0;
+    const upper = m + stdMultiplier * s;
+    const lower = Math.max(m - stdMultiplier * s, floor);
 
     const localIdx = i - trendStartIdx;
     const trend    = localIdx >= 0 ? intercept + slope * localIdx : NaN;
 
     let breakout: "above" | "below" | null = null;
     if (d.balance > 0) {
-      if (d.balance > bands.upper) {
-        const pct = bands.upper > 0 ? ((d.balance - bands.upper) / bands.upper) * 100 : 0;
+      if (d.balance > upper) {
+        const pct = upper > 0 ? ((d.balance - upper) / upper) * 100 : 0;
         if (pct >= 5) breakout = "above";
-      } else if (d.balance < bands.lower) {
+      } else if (d.balance < lower) {
         breakout = "below";
       }
     }
 
-    return { ...d, mean: bands.mean, upper: bands.upper, lower: bands.lower, trend, breakout };
+    return { ...d, mean: m, upper, lower, trend, breakout };
   });
 }
 
 // ── Static stats for summary metrics ──────────────────────────────────────
+// Uses the trailing 12 months ending at the latest point.
 export function bollingerStats(data: DataPoint[]) {
   const latest = data[data.length - 1]?.date ?? "";
   const cutoffDate = new Date(latest);
@@ -109,12 +110,13 @@ export function bollingerStats(data: DataPoint[]) {
   const stats = new Map<number, { mean: number; std: number; upper: number; lower: number }>();
   for (const [wd, vals] of groups) {
     const m = mean(vals);
-    const s = stdDev(vals);
+    const s = stdDev(vals, m);
     const floor = m >= 5000 ? m * 0.20 : 0;
     stats.set(wd, { mean: m, std: s, upper: m + 2*s, lower: Math.max(m - 2*s, floor) });
   }
   return stats;
 }
+
 
 // ── Trend calculations ─────────────────────────────────────────────────────
 
