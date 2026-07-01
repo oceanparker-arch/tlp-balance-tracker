@@ -197,6 +197,12 @@ function AgentPage() {
 
 type AgentLike = NonNullable<ReturnType<typeof useDashboardData>["agents"][number]>;
 
+interface SavedNote {
+  reason: string;
+  saved_by: string;
+  saved_at: string;
+}
+
 function ReviewSection({ agent }: { agent: AgentLike }) {
   const today = new Date().toISOString().slice(0, 10);
   const info = breakoutInfo(agent.series);
@@ -209,6 +215,55 @@ function ReviewSection({ agent }: { agent: AgentLike }) {
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [editing, setEditing] = useState(true);
+
+  // Server-side notes history
+  const [history, setHistory] = useState<SavedNote[]>([]);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  async function loadHistory() {
+    try {
+      const res = await authFetch(`${API_BASE}/api/notes/${encodeURIComponent(agent.platformId)}/${encodeURIComponent(agent.agentId)}`);
+      if (!res.ok) return;
+      const json = await res.json();
+      const list: SavedNote[] = Array.isArray(json) ? json : json?.notes ?? [];
+      setHistory(list);
+    } catch { /* ignore — API may be offline */ }
+  }
+
+  useEffect(() => {
+    loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agent.platformId, agent.agentId]);
+
+  async function handleSaveNote() {
+    if (!reason) return;
+    setSaveStatus("saving");
+    setSaveError(null);
+    try {
+      const res = await authFetch(`${API_BASE}/api/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform_id: agent.platformId,
+          agent_id: agent.agentId,
+          agent_name: agent.agentName,
+          reason,
+        }),
+      });
+      if (!res.ok) {
+        setSaveStatus("error");
+        setSaveError(`Save failed (${res.status})`);
+        return;
+      }
+      setSaveStatus("saved");
+      await loadHistory();
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    } catch {
+      setSaveStatus("error");
+      setSaveError("Cannot reach API server");
+    }
+  }
 
   useEffect(() => {
     const existing = getJoEntries().find((e) => e.id === id);
