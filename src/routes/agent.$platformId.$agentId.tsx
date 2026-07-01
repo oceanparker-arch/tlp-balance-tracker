@@ -356,14 +356,46 @@ function ReviewSection({ agent }: { agent: AgentLike }) {
         <div className="px-5 py-4 space-y-3">
           <div>
             <label className="text-xs font-medium text-text-secondary mb-1 block">Reason</label>
-            <select
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="w-full max-w-md border border-border rounded px-3 py-1.5 text-sm bg-card text-text-primary"
-            >
-              <option value="">Select reason…</option>
-              {reasons.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
+            <div className="flex items-center gap-2 max-w-md">
+              <select
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="flex-1 border border-border rounded px-3 py-1.5 text-sm bg-card text-text-primary"
+              >
+                <option value="">Select reason…</option>
+                {reasons.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <button
+                type="button"
+                onClick={handleSaveNote}
+                disabled={!reason || saveStatus === "saving"}
+                className="text-xs px-3 py-1.5 rounded text-white font-medium disabled:opacity-40"
+                style={{ background: "var(--teal, #2E7D8A)" }}
+              >
+                {saveStatus === "saving" ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {saveStatus === "saved" && (
+              <div className="mt-1 text-xs" style={{ color: "#1E8449" }}>✓ Reason saved</div>
+            )}
+            {saveStatus === "error" && saveError && (
+              <div className="mt-1 text-xs" style={{ color: "#C0392B" }}>{saveError}</div>
+            )}
+            {history.length > 0 && (
+              <div className="mt-3">
+                <div className="text-xs font-medium text-text-secondary mb-1">Previously saved reasons</div>
+                <ul className="rounded border border-border divide-y divide-border bg-secondary/40">
+                  {history.map((n, i) => (
+                    <li key={i} className="px-3 py-2 text-xs flex items-center justify-between gap-3">
+                      <span className="text-text-primary">{n.reason}</span>
+                      <span className="text-text-secondary whitespace-nowrap">
+                        {n.saved_by} · {n.saved_at ? format(new Date(n.saved_at), "dd MMM yyyy HH:mm") : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {showNotes && (
