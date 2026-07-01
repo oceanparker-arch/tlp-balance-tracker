@@ -7,6 +7,7 @@ import { BollingerChart, ChartLegend } from "@/components/BollingerChart";
 import { StatusPill, TrendArrow } from "@/components/StatusPill";
 import { formatGBP } from "@/lib/format";
 import { trendPercentChange, breakoutInfo } from "@/data/bollinger";
+import { API_BASE, authFetch } from "@/lib/auth";
 import {
   HIGH_REASONS, LOW_REASONS, alertTypeLabel,
   getJoEntries, saveJoEntries, escalateToCarl,
