@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { Link } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
+import { logout, getUsername } from "@/lib/auth";
 
 export function TopNav({
   lastUpdated,
