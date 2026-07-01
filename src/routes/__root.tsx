@@ -7,10 +7,12 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { isAuthenticated, subscribe } from "../lib/auth";
+import { LoginScreen } from "../components/LoginScreen";
 
 function NotFoundComponent() {
   return (
@@ -113,11 +115,18 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const [authed, setAuthed] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setAuthed(isAuthenticated());
+    setReady(true);
+    return subscribe(() => setAuthed(isAuthenticated()));
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      {ready && !authed ? <LoginScreen /> : <Outlet />}
     </QueryClientProvider>
   );
 }

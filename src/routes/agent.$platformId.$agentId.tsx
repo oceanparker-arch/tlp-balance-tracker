@@ -7,6 +7,7 @@ import { BollingerChart, ChartLegend } from "@/components/BollingerChart";
 import { StatusPill, TrendArrow } from "@/components/StatusPill";
 import { formatGBP } from "@/lib/format";
 import { trendPercentChange, breakoutInfo } from "@/data/bollinger";
+import { API_BASE, authFetch } from "@/lib/auth";
 import {
   HIGH_REASONS, LOW_REASONS, alertTypeLabel,
   getJoEntries, saveJoEntries, escalateToCarl,
@@ -196,6 +197,12 @@ function AgentPage() {
 
 type AgentLike = NonNullable<ReturnType<typeof useDashboardData>["agents"][number]>;
 
+interface SavedNote {
+  reason: string;
+  saved_by: string;
+  saved_at: string;
+}
+
 function ReviewSection({ agent }: { agent: AgentLike }) {
   const today = new Date().toISOString().slice(0, 10);
   const info = breakoutInfo(agent.series);
@@ -208,6 +215,55 @@ function ReviewSection({ agent }: { agent: AgentLike }) {
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [editing, setEditing] = useState(true);
+
+  // Server-side notes history
+  const [history, setHistory] = useState<SavedNote[]>([]);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  async function loadHistory() {
+    try {
+      const res = await authFetch(`${API_BASE}/api/notes/${encodeURIComponent(agent.platformId)}/${encodeURIComponent(agent.agentId)}`);
+      if (!res.ok) return;
+      const json = await res.json();
+      const list: SavedNote[] = Array.isArray(json) ? json : json?.notes ?? [];
+      setHistory(list);
+    } catch { /* ignore — API may be offline */ }
+  }
+
+  useEffect(() => {
+    loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agent.platformId, agent.agentId]);
+
+  async function handleSaveNote() {
+    if (!reason) return;
+    setSaveStatus("saving");
+    setSaveError(null);
+    try {
+      const res = await authFetch(`${API_BASE}/api/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform_id: agent.platformId,
+          agent_id: agent.agentId,
+          agent_name: agent.agentName,
+          reason,
+        }),
+      });
+      if (!res.ok) {
+        setSaveStatus("error");
+        setSaveError(`Save failed (${res.status})`);
+        return;
+      }
+      setSaveStatus("saved");
+      await loadHistory();
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    } catch {
+      setSaveStatus("error");
+      setSaveError("Cannot reach API server");
+    }
+  }
 
   useEffect(() => {
     const existing = getJoEntries().find((e) => e.id === id);
@@ -300,14 +356,46 @@ function ReviewSection({ agent }: { agent: AgentLike }) {
         <div className="px-5 py-4 space-y-3">
           <div>
             <label className="text-xs font-medium text-text-secondary mb-1 block">Reason</label>
-            <select
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="w-full max-w-md border border-border rounded px-3 py-1.5 text-sm bg-card text-text-primary"
-            >
-              <option value="">Select reason…</option>
-              {reasons.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
+            <div className="flex items-center gap-2 max-w-md">
+              <select
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="flex-1 border border-border rounded px-3 py-1.5 text-sm bg-card text-text-primary"
+              >
+                <option value="">Select reason…</option>
+                {reasons.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <button
+                type="button"
+                onClick={handleSaveNote}
+                disabled={!reason || saveStatus === "saving"}
+                className="text-xs px-3 py-1.5 rounded text-white font-medium disabled:opacity-40"
+                style={{ background: "var(--teal, #2E7D8A)" }}
+              >
+                {saveStatus === "saving" ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {saveStatus === "saved" && (
+              <div className="mt-1 text-xs" style={{ color: "#1E8449" }}>✓ Reason saved</div>
+            )}
+            {saveStatus === "error" && saveError && (
+              <div className="mt-1 text-xs" style={{ color: "#C0392B" }}>{saveError}</div>
+            )}
+            {history.length > 0 && (
+              <div className="mt-3">
+                <div className="text-xs font-medium text-text-secondary mb-1">Previously saved reasons</div>
+                <ul className="rounded border border-border divide-y divide-border bg-secondary/40">
+                  {history.map((n, i) => (
+                    <li key={i} className="px-3 py-2 text-xs flex items-center justify-between gap-3">
+                      <span className="text-text-primary">{n.reason}</span>
+                      <span className="text-text-secondary whitespace-nowrap">
+                        {n.saved_by} · {n.saved_at ? format(new Date(n.saved_at), "dd MMM yyyy HH:mm") : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {showNotes && (

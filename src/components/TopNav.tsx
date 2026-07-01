@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { Link } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
+import { logout, getUsername } from "@/lib/auth";
 
 export function TopNav({
   lastUpdated,
@@ -130,6 +131,15 @@ export function TopNav({
             <div>{format(new Date(), "EEE dd MMM yyyy")}</div>
             <div className="text-white/50">Updated: {format(lastUpdated, "HH:mm")}</div>
           </div>
+
+          <button
+            onClick={() => { logout(); }}
+            className="text-xs px-2.5 py-1 rounded border transition"
+            style={{ borderColor: "rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.85)", background: "transparent" }}
+            title={getUsername() ? `Signed in as ${getUsername()}` : "Log out"}
+          >
+            Log out
+          </button>
         </div>
       </div>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>

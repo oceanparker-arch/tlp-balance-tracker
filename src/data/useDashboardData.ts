@@ -49,7 +49,7 @@ export interface DashboardData {
 // ── API config ─────────────────────────────────────────────────────────────────
 // The Python API server runs on localhost:5000.
 // If unreachable the dashboard falls back to mock data automatically.
-const API_BASE = "http://localhost:5000";
+import { API_BASE, authFetch } from "@/lib/auth";
 
 // ── Convert API response into DataPoint[] ──────────────────────────────────────
 function apiPointsToDataPoints(points: { date: string; balance: number; wd: number }[]): DataPoint[] {
@@ -65,7 +65,7 @@ function apiPointsToDataPoints(points: { date: string; balance: number; wd: numb
 // ── Fetch live data from API ───────────────────────────────────────────────────
 async function fetchLiveData(): Promise<AgentSeries[] | null> {
   try {
-    const res = await fetch(`${API_BASE}/api/data`, { signal: AbortSignal.timeout(5000) });
+    const res = await authFetch(`${API_BASE}/api/data`, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) return null;
     const json = await res.json();
 
